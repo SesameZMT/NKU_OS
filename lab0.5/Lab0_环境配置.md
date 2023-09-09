@@ -8,6 +8,10 @@
     ```sh
     https://d2pn104n81t9m2.cloudfront.net/products/tools/
     ```
+    也可以在ubuntu终端中使用以下命令直接下载对应的版本：
+    ```sh
+    wget https://static.dev.sifive.com/dev-tools/riscv64-unknown-elf-gcc-2018.07.0-x86_64-linux-ubuntu14.tar.gz
+    ```
 2. 将文件拖拽入Ubuntu，并进行解压。
     ```sh
     tar -zxvf riscv64-unknown-elf-gcc-2018.07.0-x86_64-linux-ubuntu14.tar.gz
@@ -20,18 +24,31 @@
     ```sh
     vim ~/.bashrc
     ```
+    **注**：如果ubuntu中的终端默认程序是zsh,则需要更改以上命令为
+    ```sh
+    vim ~/.zshrc
+    ```
+    如果未下载vim，则可以通过以下命令下载：
+    ```sh
+    sudo apt install vim
+    ```
     将打开的界面拖至最后一行，点击`i`键进入编辑模式，在最后一行进行以下插入：
     ```sh
     export RISCV=PATH_TO_INSTALL（你RISCV预编译链下载的路径）
     export PATH=$RISCV/bin:$PATH
     ```
-    其中`PATH_TO_INSTALL`可以由解压后的文件拖入命令行得到，其形式为：`/home/sesame/riscv64-unknown-elf-gcc-2018.07.0-x86_64-linux-ubuntu14`。
+    其中`PATH_TO_INSTALL`可以由解压后的文件拖入命令行得到，
+    也可以在文件所在文件夹打开终端输入`pwd`命令获得文件路径，获取当前路径其形式为：`/home/sesame/riscv64-unknown-elf-gcc-2018.07.0-x86_64-linux-ubuntu14`。
     
     插入过后点击`esc`键推出编辑，之后输入`:wq`保存并退出。
 
     最后在命令行中执行
     ```sh
     source ~/.bashrc
+    ```
+    同样，如果安装了zsh，则需要更改以上命令为
+    ```sh
+    source ~/.zshrc
     ```
     即可完成配置。
 
