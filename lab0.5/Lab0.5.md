@@ -69,6 +69,7 @@
     sudo apt-get install libpixman-1-dev
     sudo apt-get install libsdl2-2.0
     sudo apt-get install libsdl2-dev
+    sudo apt-get install python2.7-dev
     ```
 2. 在命令行中执行命令：
     ```sh
@@ -80,6 +81,26 @@
     export PATH=$PWD/riscv32-softmmu:$PWD/riscv64-softmmu:$PATH
     ```
     中间可能会由于网络问题出现报错，多尝试几次就好。或者还有一种解决方式：在物理机中打开`https://download.qemu.org/qemu-4.1.1.tar.xz`并对压缩包进行下载，之后拖到虚拟机中进行后续的解压等操作。
+3. 将文件添加到路径中。
+
+
+    执行命令
+    ```sh
+    vim ~/.bashrc
+    ```
+    将打开的界面拖至最后一行，点击`i`键进入编辑模式，在最后一行进行以下插入：
+    ```sh
+    export PATH=PATH_TO_INSTALL
+    ```
+    其中`PATH_TO_INSTALL`为绝对路径，可以由解压后的文件拖入命令行得到，其形式为：`~/qemu-4.1.1/riscv32-softmmu:~/qemu-4.1.1/riscv64-softmmu:$PATH`。
+    
+    插入过后点击`esc`键推出编辑，之后输入`:wq`保存并退出。
+
+    最后在命令行中执行
+    ```sh
+    source ~/.bashrc
+    ```
+    即可完成配置。
 
     检测是否配置成功可以执行以下命令：
     ```sh
