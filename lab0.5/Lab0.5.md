@@ -57,7 +57,7 @@
     riscv64-unknown-elf-gcc -v
     ```
     配置成功可以看到以下界面:
-    ![Alt text](picture/Lab0Rust%E9%A2%84%E7%BC%96%E8%AF%91%E5%B7%A5%E5%85%B7%E9%93%BE%E9%85%8D%E7%BD%AE%E6%88%90%E5%8A%9F.png)
+    ![Alt text](picture/Lab0.5Rust%E9%A2%84%E7%BC%96%E8%AF%91%E5%B7%A5%E5%85%B7%E9%93%BE%E9%85%8D%E7%BD%AE%E6%88%90%E5%8A%9F.png)
 
 
 
@@ -107,7 +107,36 @@
     qemu-system-riscv64 --version
     ```
     配置成功可以看到以下界面:
-    ![Alt text](picture/Lab0QEMU%E9%85%8D%E7%BD%AE%E6%88%90%E5%8A%9F.png)
+    ![Alt text](picture/Lab0.5QEMU%E9%85%8D%E7%BD%AE%E6%88%90%E5%8A%9F.png)
+
+
+
+# 安装riscv64-unknown-elf-gdb
+1. 为防止报错，建议在安装之前执行以下命令
+    ```sh
+    sudo apt install apt-file
+    sudo apt-file update
+    sudo apt-file find libncurses.so.5
+    sudo apt install libncurses5
+    ```
+2. 在命令行中执行以下命令
+    ```sh
+    sudo apt-get install libncurses5-dev python2 python2-dev texinfo libreadline-dev
+    wget https://mirrors.tuna.tsinghua.edu.cn/gnu/gdb/gdb-13.1.tar.xz
+    tar -xvf gdb-13.1.tar.xz
+    cd gdb-13.1
+    mkdir build && cd build
+    ../configure --prefix=/usr/local --target=riscv64-unknown-elf --enable-tui=yes
+    make
+    sudo make install
+    ```
+
+    检测是否配置成功可以执行以下命令：
+    ```sh
+    riscv64-unknown-elf-gdb -v
+    ```
+    配置成功可以看到以下界面:
+    ![Alt text](picture/Lab0.5riscv64-unknown-elf-gdb%E5%AE%89%E8%A3%85%E6%88%90%E5%8A%9F.png)
 
 
 
