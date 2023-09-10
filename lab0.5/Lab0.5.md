@@ -3,6 +3,23 @@
 
 
 
+# 安装python2.7
+1. 执行以下命令
+    ```sh
+    wget http://www.python.org/ftp/python/2.7.5/Python-2.7.5.tar.bz2
+    tar -xvjf Python-2.7.5.tar.bz2
+    cd Python-2.7.5
+    ./configure --prefix=/usr/local/python2.7 --with-threads --enable-shared --enable-unicode=ucs4
+    make
+    make install altinstall
+    ln -s /usr/local/python2.7/lib/libpython2.7.so /usr/lib
+    ln -s /usr/local/python2.7/lib/libpython2.7.so.1.0 /usr/lib
+    ln -s /usr/local/python2.7/bin/python2.7 /usr/local/bin
+    /sbin/ldconfig -v
+    ```
+
+
+
 # 配置Rust预编译工具链
 1. 进入网址，在 ***Prebuilt RISC‑V GCC Toolchain and Emulator*** 中下载合适的压缩包（理论上来说下载好后的压缩包文件名是`riscv64-unknown-elf-gcc-2018.07.0-x86_64-linux-ubuntu14.tar.gz`）。
     ```sh
@@ -172,9 +189,13 @@
 
 * ``si``: 单步执行一条汇编指令。
 
-1. RISC-V硬件加电后的几条指令位置：
+1. 内核运行成功截图
 
 
+    opensbi运行成功
+    ![Alt text](picture/%E5%9B%BA%E4%BB%B6opensbi%E8%BF%90%E8%A1%8C%E6%88%90%E5%8A%9F.png)
 
 
-
+    makefile运行成功
+    ![Alt text](picture/makefile%E8%BF%90%E8%A1%8C%E6%88%90%E5%8A%9F.png)
+2. RISC-V硬件加电后的几条指令位置：
