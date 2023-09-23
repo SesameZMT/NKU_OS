@@ -64,7 +64,7 @@
 ## 练习
 
 ### EXERCISE2
-* 添加代码如下
+添加代码如下
 ```c
 void interrupt_handler(struct trapframe *tf) {
     intptr_t cause = (tf->cause << 1) >> 1;
@@ -102,3 +102,6 @@ void interrupt_handler(struct trapframe *tf) {
     }
 }
 ```
+
+运行结果如下：
+![Alt text](<picture/LAB1 EXERCISE2运行结果.png>)
