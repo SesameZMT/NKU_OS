@@ -65,7 +65,20 @@
 
 
 ### EXERCISE1
+`kern/init/entry.S`是一段RISC-V架构的内核启动代码，用于初始化内核并设置堆栈。
+
+
+`la sp, bootstacktop`：
+* `la` 是汇编指令中的伪指令（pseudo-instruction），通常用于将某个地址加载到寄存器中。
+* `sp` 是RISC-V架构中的寄存器，表示堆栈指针（Stack Pointer），用于跟踪当前堆栈的顶部。
+* `bootstacktop` 是一个标签（label），标识了内核启动堆栈的顶部位置。
+
 指令 `la sp, bootstacktop` 完成了将 `bootstacktop` 的地址加载到 `sp` (栈指针) 寄存器中的操作。目的是为了设置内核栈的起始地址，使得栈指针指向内核栈的顶部。
+
+`tail kern_init`：
+* `tail` 是RISC-V汇编中的伪指令，通常用于尾调用（tail call）函数。
+* `kern_init` 是一个标签（label），标识了内核初始化代码的起始位置。
+
 指令 `tail kern_init` 完成了跳转到 `kern_init` 函数的操作。目的是开始执行内核的初始化过程。使用 `tail` 指令而不是普通的跳转指令，是为了使得 `kern_init` 函数的返回地址仍然指向 `kern_entry`，以便在初始化完成后能够正确返回到 `kern_entry` 继续执行其他操作。
 
 
