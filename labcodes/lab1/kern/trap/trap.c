@@ -146,6 +146,8 @@ void interrupt_handler(struct trapframe *tf) {
     }
 }
 
+// tf->cause 寄存器的宏定义见 /libs/riscv.h
+// 其实本函数中自上而下的宏定义分别代表了0x0到0xb
 void exception_handler(struct trapframe *tf) {
     switch (tf->cause) {
         case CAUSE_MISALIGNED_FETCH:
@@ -154,19 +156,43 @@ void exception_handler(struct trapframe *tf) {
             break;
         case CAUSE_ILLEGAL_INSTRUCTION:
              // 非法指令异常处理
-             /* LAB1 CHALLENGE3   YOUR CODE :  */
+             /* LAB1 CHALLENGE3   YOUR CODE : 2111454 */
             /*(1)输出指令异常类型（ Illegal instruction）
              *(2)输出异常指令地址
              *(3)更新 tf->epc寄存器
             */
+
+            cprintf("Exception Type:Illegal Instruction\n");
+
+            // tf->epc寄存器保存了触发中断的指令的地址
+            // 因此输出该寄存器的值就是中断指令的地址
+            // %08x的含义：08表示输出8个字符，x是输出16进制
+            cprintf("Illegal Instruction caught at 0x%08x\n", tf->epc);
+            
+            // 所谓更新tf->epc寄存器，本质上指的是让其记录下一条指令
+            // 因此将该寄存器更新的操作就是让其内部地址偏移+4
+            tf->epc += 4;
+
             break;
         case CAUSE_BREAKPOINT:
             //断点异常处理
-            /* LAB1 CHALLLENGE3   YOUR CODE :  */
+            /* LAB1 CHALLLENGE3   YOUR CODE : 2111454 */
             /*(1)输出指令异常类型（ breakpoint）
              *(2)输出异常指令地址
              *(3)更新 tf->epc寄存器
             */
+            
+            cprintf("Exception Type:Breakpoint\n");
+
+            // tf->epc寄存器保存了触发中断的指令的地址
+            // 因此输出该寄存器的值就是中断指令的地址
+            // %08x的含义：08表示输出8个字符，x是输出16进制
+            cprintf("Breakpoint caught at 0x%08x\n", tf->epc);
+            
+            // 所谓更新tf->epc寄存器，本质上指的是让其记录下一条指令
+            // 因此将该寄存器更新的操作就是让其内部地址偏移+4
+            tf->epc += 4;
+            
             break;
         case CAUSE_MISALIGNED_LOAD:
             break;

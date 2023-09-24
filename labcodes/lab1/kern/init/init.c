@@ -33,6 +33,16 @@ int kern_init(void) {
 
     intr_enable();  // enable irq interrupt
     
+    // 指令异常
+    /* 
+    测试了另外两个特权指令ecall和sret发现并不能触发指令异常
+    分析原因是我们本身就处于U态，因此两条指令并不属于异常指令
+    而mret需要更高的特权级因此可以触发
+    */
+    asm("mret");
+    // 断点异常
+    asm("ebreak"); 
+
     while (1)
         ;
 }
