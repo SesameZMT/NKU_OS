@@ -63,6 +63,7 @@
 
 ## 练习
 
+
 ### EXERCISE1
 指令 `la sp, bootstacktop` 完成了将 `bootstacktop` 的地址加载到 `sp` (栈指针) 寄存器中的操作。目的是为了设置内核栈的起始地址，使得栈指针指向内核栈的顶部。
 指令 `tail kern_init` 完成了跳转到 `kern_init` 函数的操作。目的是开始执行内核的初始化过程。使用 `tail` 指令而不是普通的跳转指令，是为了使得 `kern_init` 函数的返回地址仍然指向 `kern_entry`，以便在初始化完成后能够正确返回到 `kern_entry` 继续执行其他操作。
@@ -141,3 +142,103 @@ void interrupt_handler(struct trapframe *tf) {
 在 `RESTORE_ALL` 中，没有还原 `stval` 和 `scause` 这些 CSR 的值。这是因为在正常的异常处理过程中，这些 CSR 的值通常是只读的，不需要手动修改或还原。而且，在异常处理程序执行完毕后，处理器会自动根据异常发生时的现场信息将这些 CSR 恢复到正确的值。
 
 尽管在 `RESTORE_ALL` 中没有还原这些 CSR 的值，但在 `SAVE_ALL` 中保存这些 CSR 的操作仍然有意义。这是因为在异常处理程序执行期间，如果需要访问这些 CSR 的值，可以通过读取 `sscratch` 寄存器的值来获取。这样做可以保存这些 CSR 的值，使它们不会因异常处理过程中的修改而被影响，保证了异常处理的正确性。
+
+
+### CHALLENGE3
+添加的代码如下
+
+/kern/trap/trap.c
+```c
+// tf->cause 寄存器的宏定义见 /libs/riscv.h
+// 其实本函数中自上而下的宏定义分别代表了0x0到0xb
+void exception_handler(struct trapframe *tf) {
+    switch (tf->cause) {
+
+        /*
+            其他case
+        */
+
+        case CAUSE_ILLEGAL_INSTRUCTION:
+            // 非法指令异常处理
+            /* LAB1 CHALLENGE3   YOUR CODE : 2111454 */
+            /*(1)输出指令异常类型（ Illegal instruction）
+            *(2)输出异常指令地址
+            *(3)更新 tf->epc寄存器
+            */
+
+            cprintf("Exception Type:Illegal Instruction\n");
+
+            // tf->epc寄存器保存了触发中断的指令的地址
+            // 因此输出该寄存器的值就是中断指令的地址
+            // %08x的含义：08表示输出8个字符，x是输出16进制
+            cprintf("Illegal Instruction caught at 0x%08x\n", tf->epc);
+            
+            // 所谓更新tf->epc寄存器，本质上指的是让其记录下一条指令
+            // 因此将该寄存器更新的操作就是让其内部地址偏移+4
+            tf->epc += 4;
+
+            break;
+        case CAUSE_BREAKPOINT:
+            //断点异常处理
+            /* LAB1 CHALLLENGE3   YOUR CODE : 2111454 */
+            /*(1)输出指令异常类型（ breakpoint）
+            *(2)输出异常指令地址
+            *(3)更新 tf->epc寄存器
+            */
+            
+            cprintf("Exception Type:Breakpoint\n");
+
+            // tf->epc寄存器保存了触发中断的指令的地址
+            // 因此输出该寄存器的值就是中断指令的地址
+            // %08x的含义：08表示输出8个字符，x是输出16进制
+            cprintf("Breakpoint caught at 0x%08x\n", tf->epc);
+            
+            // 所谓更新tf->epc寄存器，本质上指的是让其记录下一条指令
+            // 因此将该寄存器更新的操作就是让其内部地址偏移+4
+            tf->epc += 4;
+            
+            break;
+
+        /*
+            其他case
+        */
+       
+    }
+}   
+```
+
+/kern/init/init.c
+```c
+int kern_init(void) {
+    /*
+        其他部分
+    */
+    
+    // 指令异常
+    /* 
+    测试了另外两个特权指令ecall和sret发现并不能触发指令异常
+    分析原因是我们本身就处于U态，因此两条指令并不属于异常指令
+    而mret需要更高的特权级因此可以触发
+    */
+    asm("mret");
+    // 断点异常
+    asm("ebreak"); 
+
+    while (1)
+        ;
+}
+```
+
+运行结果如下：
+![Alt text](<picture/LAB1 CHALLENGE3运行结果.png>)
+
+
+
+### 练习评分
+执行如下命令进行评分
+```sh
+make grade
+```
+
+评分结果如下：
+![Alt text](picture/LAB1%E8%AF%84%E5%88%86.png)
