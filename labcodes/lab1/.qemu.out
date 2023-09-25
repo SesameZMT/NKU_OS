@@ -32,10 +32,10 @@ Kernel executable memory footprint: 17KB
 sbi_emulate_csr_read: hartid0: invalid csr_num=0x302
 Exception Type:Illegal Instruction
 Illegal Instruction caught at 0x80200050
-100 ticks
 Exception Type:Breakpoint
 Breakpoint caught at 0x80200054
 100 ticks
+100 ticks
 100 ticks
 100 ticks
 100 ticks
