@@ -65,12 +65,27 @@
 
 
 ### EXERCISE1
+`kern/init/entry.S`是一段RISC-V架构的内核启动代码，用于初始化内核并设置堆栈。
+
+
+`la sp, bootstacktop`：
+* `la` 是汇编指令中的伪指令（pseudo-instruction），通常用于将某个地址加载到寄存器中。
+* `sp` 是RISC-V架构中的寄存器，表示堆栈指针（Stack Pointer），用于跟踪当前堆栈的顶部。
+* `bootstacktop` 是一个标签（label），标识了内核启动堆栈的顶部位置。
+
 指令 `la sp, bootstacktop` 完成了将 `bootstacktop` 的地址加载到 `sp` (栈指针) 寄存器中的操作。目的是为了设置内核栈的起始地址，使得栈指针指向内核栈的顶部。
+
+`tail kern_init`：
+* `tail` 是RISC-V汇编中的伪指令，通常用于尾调用（tail call）函数。
+* `kern_init` 是一个标签（label），标识了内核初始化代码的起始位置。
+
 指令 `tail kern_init` 完成了跳转到 `kern_init` 函数的操作。目的是开始执行内核的初始化过程。使用 `tail` 指令而不是普通的跳转指令，是为了使得 `kern_init` 函数的返回地址仍然指向 `kern_entry`，以便在初始化完成后能够正确返回到 `kern_entry` 继续执行其他操作。
 
 
 ### EXERCISE2
+
 添加代码如下
+
 ```c
 void interrupt_handler(struct trapframe *tf) {
     intptr_t cause = (tf->cause << 1) >> 1;
@@ -109,7 +124,22 @@ void interrupt_handler(struct trapframe *tf) {
 }
 ```
 
+实现过程：
+
+* `intptr_t cause = (tf->cause << 1) >> 1;`：这行代码从中断帧 tf 中获取中断原因，并将其存储在 cause 变量中。通过左移一位然后再右移一位的方式清除了最高位，确保 cause 中只包含实际的原因值。
+* `switch (cause)`：根据中断原因选择不同的处理分支。
+* `case IRQ_S_TIMER:`：这个分支处理的是定时器中断（Supervisor Timer Interrupt）。
+* `clock_set_next_event();`：调用函数设置下一次的时钟中断事件。它会计算下一个时间片的结束时间，以便在该时间点触发中断。
+* `if(ticks++ % TICK_NUM == 0 && num < 10)`：检查是否应该执行打印操作。ticks 是一个全局计数器，用于跟踪时钟中断的数量。TICK_NUM 是一个文件头部的宏定义常数，表示多少个时钟中断触发一次打印操作。num 用于跟踪打印操作的次数。
+    * 如果 ticks 能被 TICK_NUM 整除，并且 num 小于 10，那么执行以下操作：
+        * num 增加1，表示已经触发了一次打印。
+        * 调用 print_ticks() 函数来执行打印操作。
+
+    * 否则，如果 num 达到了10，执行以下操作：
+        * 调用 sbi_shutdown() 函数，关闭系统。
+
 运行结果如下：
+
 ![Alt text](<picture/LAB1 EXERCISE2运行结果.png>)
 
 

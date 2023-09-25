@@ -10,7 +10,7 @@
 #include <trap.h>
 #include <sbi.h>
 
-#define TICK_NUM 100
+#define TICK_NUM 100  /* 宏定义中断时钟次数 */
 volatile size_t num=0;
 
 static void print_ticks() {
