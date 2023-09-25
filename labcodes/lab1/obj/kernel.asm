@@ -1,5 +1,5 @@
 
-bin/kernel：     文件格式 elf64-littleriscv
+bin/kernel:     file format elf64-littleriscv
 
 
 Disassembly of section .text:
@@ -68,11 +68,11 @@ int kern_init(void) {
     分析原因是我们本身就处于U态，因此两条指令并不属于异常指令
     而mret需要更高的特权级因此可以触发
     */
-    asm("mret");
-    80200050:	30200073          	mret
+    asm("ebreak");
+    80200050:	9002                	ebreak
     // 断点异常
-    asm("ebreak"); 
-    80200054:	9002                	ebreak
+    asm("mret"); 
+    80200052:	30200073          	mret
 
     while (1)
         ;
@@ -575,7 +575,7 @@ void interrupt_handler(struct trapframe *tf) {
 void interrupt_handler(struct trapframe *tf) {
     8020042a:	1141                	addi	sp,sp,-16
     8020042c:	e406                	sd	ra,8(sp)
-            clock_set_next_event();
+            clock_set_next_event();// 定义在/kern/driver/clock.c
     8020042e:	d3dff0ef          	jal	ra,8020016a <clock_set_next_event>
             if(ticks++ % TICK_NUM == 0 && num < 10)
     80200432:	00004797          	auipc	a5,0x4
@@ -696,12 +696,12 @@ void exception_handler(struct trapframe *tf) {
     80200512:	00000517          	auipc	a0,0x0
     80200516:	72650513          	addi	a0,a0,1830 # 80200c38 <etext+0x1be>
     8020051a:	b59ff0ef          	jal	ra,80200072 <cprintf>
-            tf->epc += 4;
+            tf->epc += 2;
     8020051e:	10843783          	ld	a5,264(s0)
 }
     80200522:	60a2                	ld	ra,8(sp)
-            tf->epc += 4;
-    80200524:	0791                	addi	a5,a5,4
+            tf->epc += 2;
+    80200524:	0789                	addi	a5,a5,2
     80200526:	10f43423          	sd	a5,264(s0)
 }
     8020052a:	6402                	ld	s0,0(sp)

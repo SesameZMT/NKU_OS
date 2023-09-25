@@ -191,8 +191,9 @@ void exception_handler(struct trapframe *tf) {
             cprintf("Breakpoint caught at 0x%08x\n", tf->epc);
             
             // 所谓更新tf->epc寄存器，本质上指的是让其记录下一条指令
-            // 因此将该寄存器更新的操作就是让其内部地址偏移+4
-            tf->epc += 4;
+            // 因此将该寄存器更新的操作就是让其内部地址偏移+2
+            
+            tf->epc += 2;
             
             break;
         case CAUSE_MISALIGNED_LOAD:

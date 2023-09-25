@@ -39,9 +39,9 @@ int kern_init(void) {
     分析原因是我们本身就处于U态，因此两条指令并不属于异常指令
     而mret需要更高的特权级因此可以触发
     */
-    asm("mret");
+    asm("ebreak");
     // 断点异常
-    asm("ebreak"); 
+    asm("mret"); 
 
     while (1)
         ;
