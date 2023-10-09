@@ -55,6 +55,7 @@
  *               (5.2) reset the fields of pages, such as p->ref, p->flags (PageProperty)
  *               (5.3) try to merge low addr or high addr blocks. Notice: should change some pages's p->property correctly.
  */
+// 在memlayout.h中可以找到相关定义
 free_area_t free_area;
 
 #define free_list (free_area.free_list)
@@ -73,8 +74,12 @@ best_fit_init_memmap(struct Page *base, size_t n) {
     for (; p != base + n; p ++) {
         assert(PageReserved(p));
 
-        /*LAB2 EXERCISE 2: YOUR CODE*/ 
+        /*LAB2 EXERCISE 2: 2111454*/ 
         // 清空当前页框的标志和属性信息，并将页框的引用计数设置为0
+        // 结构体Page的相关定义见memlayout.h
+        p->ref = 0;  // 当前页框引用计数设置为0
+        ClearPageProperty(p); // 清空页框属性
+        ClearPageReserved(p); // 清空页框标志
     }
     base->property = n;
     SetPageProperty(base);
@@ -85,10 +90,19 @@ best_fit_init_memmap(struct Page *base, size_t n) {
         list_entry_t* le = &free_list;
         while ((le = list_next(le)) != &free_list) {
             struct Page* page = le2page(le, page_link);
-             /*LAB2 EXERCISE 2: YOUR CODE*/ 
+             /*LAB2 EXERCISE 2: 2111454*/ 
             // 编写代码
             // 1、当base < page时，找到第一个大于base的页，将base插入到它前面，并退出循环
+            if (base < page)
+            {
+                list_add_before(le,&(base->page_link));
+                break;
+            }
             // 2、当list_next(le) == &free_list时，若已经到达链表结尾，将base插入到链表尾部
+            if (list_next(le) == &free_list)
+            {
+                list_add_after(le,&(base->page_link));
+            }
         }
     }
 }
