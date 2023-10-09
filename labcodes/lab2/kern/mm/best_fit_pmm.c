@@ -77,9 +77,8 @@ best_fit_init_memmap(struct Page *base, size_t n) {
         /*LAB2 EXERCISE 2: 2111454*/ 
         // 清空当前页框的标志和属性信息，并将页框的引用计数设置为0
         // 结构体Page的相关定义见memlayout.h
-        p->ref = 0;  // 当前页框引用计数设置为0
-        ClearPageProperty(p); // 清空页框属性
-        ClearPageReserved(p); // 清空页框标志
+        p->flags = p->property = 0;
+        set_page_ref(p, 0);
     }
     base->property = n;
     SetPageProperty(base);
