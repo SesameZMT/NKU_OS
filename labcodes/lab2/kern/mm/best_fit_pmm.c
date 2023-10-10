@@ -116,7 +116,7 @@ best_fit_alloc_pages(size_t n) {
     struct Page *page = NULL;
     list_entry_t *le = &free_list;
     size_t min_size = nr_free + 1;
-     /*LAB2 EXERCISE 2: YOUR CODE*/ 
+     /*LAB2 EXERCISE 2: 2111454*/ 
     // 下面的代码是first-fit的部分代码，请修改下面的代码改为best-fit
     // 遍历空闲链表，查找满足需求的空闲页框
     // 如果找到满足需求的页面，记录该页面以及当前找到的最小连续空闲页框数量
@@ -129,13 +129,29 @@ best_fit_alloc_pages(size_t n) {
     }
 
     if (page != NULL) {
-        list_entry_t* prev = list_prev(&(page->page_link));
         list_del(&(page->page_link));
         if (page->property > n) {
             struct Page *p = page + n;
             p->property = page->property - n;
             SetPageProperty(p);
-            list_add(prev, &(p->page_link));
+            // 将剩余的页框从空闲链表头开始循环查找
+            // 直到找到第一个比该页面大的页面将本页面插在他前面
+            le = &free_list; //重定义le
+            while (le = list_next(le) != &free_list)
+            {
+                struct Page *p1 = le2page(le, page_link);
+                // 找到了就插在前面
+                if(p1->property >= p->property)
+                {
+                    list_add_before(&(p1->page_link),&(p->page_link));
+                    break;
+                }
+                // 找完了列表就插在最后
+                if(list_next(le) == &free_list)
+                {
+                    list_add_after(&(p1->page_link),&(p->page_link));
+                }
+            }
         }
         nr_free -= n;
         ClearPageProperty(page);
