@@ -93,7 +93,7 @@ best_fit_init_memmap(struct Page *base, size_t n) {
              /*LAB2 EXERCISE 2: 2111454*/ 
             // 编写代码
             // 1、当base < page时，找到第一个大于base的页，将base插入到它前面，并退出循环
-            if (base->property < page->property)
+            if (base < page)
             {
                 list_add_before(&(page->page_link),&(base->page_link));
                 break;
@@ -122,43 +122,20 @@ best_fit_alloc_pages(size_t n) {
     // 如果找到满足需求的页面，记录该页面以及当前找到的最小连续空闲页框数量
     while ((le = list_next(le)) != &free_list) {
         struct Page *p = le2page(le, page_link);
-        if (p->property >= n) {
+        if (p->property >= n && min_size > p->property) {
             page = p;
-            break;
+            min_size = p->property;
         }
     }
 
     if (page != NULL) {
+        list_entry_t* prev = list_prev(&(page->page_link));
         list_del(&(page->page_link));
         if (page->property > n) {
             struct Page *p = page + n;
             p->property = page->property - n;
             SetPageProperty(p);
-            if (list_empty(&free_list)) 
-            {
-                list_add(&free_list, &(p->page_link));
-            } 
-            else 
-            {
-                // 将剩余的页框从空闲链表头开始循环查找
-                // 直到找到第一个比该页面大的页面将本页面插在他前面
-                le = &free_list; //重定义le
-                while ((le = list_next(le)) != &free_list)
-                {
-                    struct Page *page1 = le2page(le, page_link);
-                    // 找到了就插在前面
-                    if(page1->property > p->property)
-                    {
-                        list_add_before(&(page1->page_link),&(p->page_link));
-                        break;
-                    }
-                    // 找完了列表就插在最后
-                    if(list_next(le) == &free_list)
-                    {
-                        list_add_after(&(page1->page_link),&(p->page_link));
-                    }
-                }
-            }
+            list_add(prev, &(p->page_link));
         }
         nr_free -= n;
         ClearPageProperty(page);
@@ -188,7 +165,7 @@ best_fit_free_pages(struct Page *base, size_t n) {
         list_entry_t* le = &free_list;
         while ((le = list_next(le)) != &free_list) {
             struct Page* page = le2page(le, page_link);
-            if (base->property < page->property) {
+            if (base < page) {
                 list_add_before(le, &(base->page_link));
                 break;
             } else if (list_next(le) == &free_list) {
