@@ -165,8 +165,165 @@ default_free_pages：
 请在实验报告中简要说明你的设计实现过程。请回答如下问题：
 - 你的first fit算法是否有进一步的改进空间？
 
+First Fit算法在处理内存碎片和提高分配效率方面存在改进空间：
+
+    内存碎片优化：一种改进First Fit的方法是采用更高级的内存分配算法，如Best Fit或Next Fit，以减少内存碎片。这些算法更有效地利用内存空间，减少了碎片的发生。
+
+    动态分区大小：First Fit通常使用静态分区大小，即将内存分成固定大小的块。一种改进是使用动态分区大小，根据不同的内存分配请求自动分配不同大小的内存块，以最大程度减少碎片。
+
+    碎片整理：实现一种碎片整理机制，周期性地整理内存以合并碎片，从而提高内存的利用率。这种方法可以通过移动数据来合并不相邻的内存块，减少碎片。
+
+    优化搜索：First Fit的一个问题是它从内存空闲块链表的起始位置开始搜索，可能需要遍历整个链表才能找到合适的块。通过使用更高效的搜索算法，可以减少搜索时间。
+
 #### 练习2：实现 Best-Fit 连续物理内存分配算法（需要编程）
 在完成练习一后，参考kern/mm/default_pmm.c对First Fit算法的实现，编程实现Best Fit页面分配算法，算法的时空复杂度不做要求，能通过测试即可。
+
+best_fit_init_memmap:
+```c
+static void
+best_fit_init_memmap(struct Page *base, size_t n) {
+    assert(n > 0);
+    struct Page *p = base;
+    for (; p != base + n; p ++) {
+        assert(PageReserved(p));
+
+        /*LAB2 EXERCISE 2: 2111454*/ 
+        // 清空当前页框的标志和属性信息，并将页框的引用计数设置为0
+        // 结构体Page的相关定义见memlayout.h
+        p->flags = 0;
+        p->property = 0;
+        set_page_ref(p, 0);
+    }
+    base->property = n;
+    SetPageProperty(base);
+    nr_free += n;
+    if (list_empty(&free_list)) {
+        list_add(&free_list, &(base->page_link));
+    } else {
+        list_entry_t* le = &free_list;
+        while ((le = list_next(le)) != &free_list) {
+            struct Page* page = le2page(le, page_link);
+             /*LAB2 EXERCISE 2: 2111454*/ 
+            // 编写代码
+            // 1、当base < page时，找到第一个大于base的页，将base插入到它前面，并退出循环
+            if (base < page)
+            {
+                list_add_before(&(page->page_link),&(base->page_link));
+                break;
+            }
+            // 2、当list_next(le) == &free_list时，若已经到达链表结尾，将base插入到链表尾部
+            if (list_next(le) == &free_list)
+            {
+                list_add_after(&(page->page_link),&(base->page_link));
+            }
+        }
+    }
+}
+```
+
+best_fit_alloc_pages:
+```c
+static struct Page *
+best_fit_alloc_pages(size_t n) {
+    assert(n > 0);
+    if (n > nr_free) {
+        return NULL;
+    }
+    struct Page *page = NULL;
+    list_entry_t *le = &free_list;
+    size_t min_size = nr_free + 1;
+     /*LAB2 EXERCISE 2: 2111454*/ 
+    // 下面的代码是first-fit的部分代码，请修改下面的代码改为best-fit
+    // 遍历空闲链表，查找满足需求的空闲页框
+    // 如果找到满足需求的页面，记录该页面以及当前找到的最小连续空闲页框数量
+    while ((le = list_next(le)) != &free_list) {
+        struct Page *p = le2page(le, page_link);
+        if (p->property >= n && min_size > p->property) {
+            page = p;
+            min_size = p->property;
+        }
+    }
+
+    if (page != NULL) {
+        list_entry_t* prev = list_prev(&(page->page_link));
+        list_del(&(page->page_link));
+        if (page->property > n) {
+            struct Page *p = page + n;
+            p->property = page->property - n;
+            SetPageProperty(p);
+            list_add(prev, &(p->page_link));
+        }
+        nr_free -= n;
+        ClearPageProperty(page);
+    }
+    return page;
+}
+```
+
+best_fit_free_pages:
+```c
+static void
+best_fit_free_pages(struct Page *base, size_t n) {
+    assert(n > 0);
+    struct Page *p = base;
+    for (; p != base + n; p ++) {
+        assert(!PageReserved(p) && !PageProperty(p));
+        p->flags = 0;
+        set_page_ref(p, 0);
+    }
+    /*LAB2 EXERCISE 2: 2111454*/ 
+    // 编写代码
+    // 具体来说就是设置当前页块的属性为释放的页块数、并将当前页块标记为已分配状态、最后增加nr_free的值
+    base->property = n;
+    SetPageProperty(base);
+    nr_free += n;
+
+    if (list_empty(&free_list)) {
+        list_add(&free_list, &(base->page_link));
+    } else {
+        list_entry_t* le = &free_list;
+        while ((le = list_next(le)) != &free_list) {
+            struct Page* page = le2page(le, page_link);
+            if (base < page) {
+                list_add_before(le, &(base->page_link));
+                break;
+            } else if (list_next(le) == &free_list) {
+                list_add(le, &(base->page_link));
+            }
+        }
+    }
+
+    list_entry_t* le = list_prev(&(base->page_link));
+    if (le != &free_list) {
+        p = le2page(le, page_link);
+        /*LAB2 EXERCISE 2: 2111454*/ 
+         // 编写代码
+        // 1、判断前面的空闲页块是否与当前页块是连续的，如果是连续的，则将当前页块合并到前面的空闲页块中
+        // 2、首先更新前一个空闲页块的大小，加上当前页块的大小
+        // 3、清除当前页块的属性标记，表示不再是空闲页块
+        // 4、从链表中删除当前页块
+        // 5、将指针指向前一个空闲页块，以便继续检查合并后的连续空闲页块
+        if(p + p->property == base)
+        {
+            p->property += base->property;
+            ClearPageProperty(base);
+            list_del(&(base->page_link));
+            base = p;
+        }
+    }
+
+    le = list_next(&(base->page_link));
+    if (le != &free_list) {
+        p = le2page(le, page_link);
+        if (base + base->property == p) {
+            base->property += p->property;
+            ClearPageProperty(p);
+            list_del(&(p->page_link));
+        }
+    }
+}
+```
+
 请在实验报告中简要说明你的设计实现过程，阐述代码是如何对物理内存进行分配和释放，并回答如下问题：
 - 你的 Best-Fit 算法是否有进一步的改进空间？
 

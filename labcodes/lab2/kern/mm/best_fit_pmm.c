@@ -152,7 +152,7 @@ best_fit_free_pages(struct Page *base, size_t n) {
         p->flags = 0;
         set_page_ref(p, 0);
     }
-    /*LAB2 EXERCISE 2: YOUR 2111454*/ 
+    /*LAB2 EXERCISE 2: 2111454*/ 
     // 编写代码
     // 具体来说就是设置当前页块的属性为释放的页块数、并将当前页块标记为已分配状态、最后增加nr_free的值
     base->property = n;
