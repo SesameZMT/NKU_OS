@@ -56,38 +56,55 @@
  *               (5.3) try to merge low addr or high addr blocks. Notice: should change some pages's p->property correctly.
  */
 // 在memlayout.h中可以找到相关定义
-free_area_t free_area;
 
-#define free_list (free_area.free_list)
-#define nr_free (free_area.nr_free)
+/*
+初始化时准备Best Fit算法所需的数据结构,用来跟踪和选择最佳匹配的内存块以满足分配请求
+*/
+
+free_area_t free_area; // 定义一个名为free_area的自定义数据结构
+
+#define free_list (free_area.free_list) // 定义free_list为free_area的成员free_list
+#define nr_free (free_area.nr_free)     // 定义nr_free为free_area的成员nr_free
 
 static void
 best_fit_init(void) {
-    list_init(&free_list);
-    nr_free = 0;
+    list_init(&free_list); // 初始化链表free_list
+    nr_free = 0; // 初始化可用内存块数量为0
 }
 
+
+/*
+在系统启动时初始化一段物理内存块的属性，准备一段物理内存，以供后续的内存分配操作使用，
+同时确保这些内存块按照地址顺序排列，以便Best Fit算法能够高效地找到最佳匹配的内存块
+*/
 static void
 best_fit_init_memmap(struct Page *base, size_t n) {
-    assert(n > 0);
+    assert(n > 0);  // 确保内存块数量大于0
     struct Page *p = base;
+
+    // 遍历要初始化的内存块
     for (; p != base + n; p ++) {
-        assert(PageReserved(p));
+        assert(PageReserved(p));    // 确保内存块是保留的
 
         /*LAB2 EXERCISE 2: 2111454*/ 
         // 清空当前页框的标志和属性信息，并将页框的引用计数设置为0
         // 结构体Page的相关定义见memlayout.h
-        p->flags = 0;
-        p->property = 0;
-        set_page_ref(p, 0);
+        p->flags = 0;       // 清空标志信息
+        p->property = 0;    // 清空属性信息
+        set_page_ref(p, 0); // 设置引用计数为0
     }
-    base->property = n;
-    SetPageProperty(base);
-    nr_free += n;
+
+    base->property = n; // 设置base的属性为n，表示这些页是连续的
+    SetPageProperty(base); // 设置base为属性页
+    nr_free += n; // 增加可用内存块的数量
+
     if (list_empty(&free_list)) {
+        // 如果free_list为空，将base添加为第一个元素
         list_add(&free_list, &(base->page_link));
     } else {
         list_entry_t* le = &free_list;
+
+        // 遍历free_list链表
         while ((le = list_next(le)) != &free_list) {
             struct Page* page = le2page(le, page_link);
              /*LAB2 EXERCISE 2: 2111454*/ 
@@ -107,15 +124,22 @@ best_fit_init_memmap(struct Page *base, size_t n) {
     }
 }
 
+
+/*
+实现Best Fit算法的页面分配过程
+高效地找到满足需求的最佳匹配的页面，并进行分配
+*/
 static struct Page *
 best_fit_alloc_pages(size_t n) {
-    assert(n > 0);
-    if (n > nr_free) {
+    assert(n > 0);  // 确保分配的页面数量大于0
+    if (n > nr_free) {  // 如果需求的页面数量大于可用的页面数量，分配失败
         return NULL;
     }
-    struct Page *page = NULL;
-    list_entry_t *le = &free_list;
-    size_t min_size = nr_free + 1;
+
+    struct Page *page = NULL; // 用于记录分配的页面
+    list_entry_t *le = &free_list; // 从free_list的头部开始查找可用页面
+    size_t min_size = nr_free + 1; // 初始化最小连续空闲页框数量
+
      /*LAB2 EXERCISE 2: 2111454*/ 
     // 下面的代码是first-fit的部分代码，请修改下面的代码改为best-fit
     // 遍历空闲链表，查找满足需求的空闲页框
@@ -130,45 +154,59 @@ best_fit_alloc_pages(size_t n) {
 
     if (page != NULL) {
         list_entry_t* prev = list_prev(&(page->page_link));
-        list_del(&(page->page_link));
+        list_del(&(page->page_link));   // 从空闲链表中删除已分配的页面
         if (page->property > n) {
             struct Page *p = page + n;
+
+            // 如果剩余的空闲页框数量大于需求的页面数量，将剩余部分添加到空闲链表
             p->property = page->property - n;
             SetPageProperty(p);
             list_add(prev, &(p->page_link));
         }
-        nr_free -= n;
-        ClearPageProperty(page);
+        nr_free -= n;   // 减少可用内存块的数量
+        ClearPageProperty(page);    // 清除页面的属性标记
     }
-    return page;
+    return page;    // 返回分配的页面
 }
 
+/*
+实现了Best Fit算法的页面释放
+*/
 static void
 best_fit_free_pages(struct Page *base, size_t n) {
-    assert(n > 0);
+    assert(n > 0);  // 确保分配的页面数量大于0
     struct Page *p = base;
     for (; p != base + n; p ++) {
         assert(!PageReserved(p) && !PageProperty(p));
+
+        // 清除当前页块的标志和属性信息，并将页块的引用计数设置为0
         p->flags = 0;
         set_page_ref(p, 0);
     }
     /*LAB2 EXERCISE 2: 2111454*/ 
     // 编写代码
     // 具体来说就是设置当前页块的属性为释放的页块数、并将当前页块标记为已分配状态、最后增加nr_free的值
+    
+    // 设置当前页块的属性为已释放的页块数，并将当前页块标记为已分配状态，然后增加nr_free的值
     base->property = n;
     SetPageProperty(base);
     nr_free += n;
 
     if (list_empty(&free_list)) {
+        // 如果空闲链表为空，直接将当前页块添加到链表头部
         list_add(&free_list, &(base->page_link));
     } else {
+        // 如果空闲链表非空，遍历链表，找到合适的位置插入当前页块
         list_entry_t* le = &free_list;
         while ((le = list_next(le)) != &free_list) {
             struct Page* page = le2page(le, page_link);
+
+            // 当当前页块的地址小于当前遍历的页块地址时，将当前页块插入到当前遍历的页块前面
             if (base < page) {
                 list_add_before(le, &(base->page_link));
                 break;
             } else if (list_next(le) == &free_list) {
+                // 如果已经到达链表尾部，将当前页块添加到链表尾部
                 list_add(le, &(base->page_link));
             }
         }
@@ -184,12 +222,15 @@ best_fit_free_pages(struct Page *base, size_t n) {
         // 3、清除当前页块的属性标记，表示不再是空闲页块
         // 4、从链表中删除当前页块
         // 5、将指针指向前一个空闲页块，以便继续检查合并后的连续空闲页块
+        
+        // 判断前面的空闲页块是否与当前页块是连续的，如果是连续的，则将当前页块合并到前面的空闲页块中
         if(p + p->property == base)
         {
+            // 更新前一个空闲页块的大小，加上当前页块的大小
             p->property += base->property;
-            ClearPageProperty(base);
-            list_del(&(base->page_link));
-            base = p;
+            ClearPageProperty(base);    // 清除当前页块的属性标记，表示不再是空闲页块
+            list_del(&(base->page_link));   // 从链表中删除当前页块
+            base = p;   // 将指针指向前一个空闲页块，以便继续检查合并后的连续空闲页块
         }
     }
 
@@ -197,6 +238,7 @@ best_fit_free_pages(struct Page *base, size_t n) {
     if (le != &free_list) {
         p = le2page(le, page_link);
         if (base + base->property == p) {
+            // 判断后面的空闲页块是否与当前页块是连续的，如果是连续的，则将它们合并
             base->property += p->property;
             ClearPageProperty(p);
             list_del(&(p->page_link));
