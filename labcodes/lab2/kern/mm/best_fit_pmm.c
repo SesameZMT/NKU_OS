@@ -169,6 +169,9 @@ best_fit_alloc_pages(size_t n) {
     return page;    // 返回分配的页面
 }
 
+/*
+实现了Best Fit算法的页面释放
+*/
 static void
 best_fit_free_pages(struct Page *base, size_t n) {
     assert(n > 0);  // 确保分配的页面数量大于0
