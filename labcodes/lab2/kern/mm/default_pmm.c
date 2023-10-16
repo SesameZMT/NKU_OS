@@ -53,7 +53,7 @@
  *               (5.2) reset the fields of pages, such as p->ref, p->flags (PageProperty)
  *               (5.3) try to merge low addr or high addr blocks. Notice: should change some pages's p->property correctly.
  */
-free_area_t free_area;
+free_area_t free_area;  // 一个空闲区域的结构，其中包含一个空闲列表（list_entry_t类型，里面有俩指针）和一个空闲块计数器。
 
 #define free_list (free_area.free_list)
 #define nr_free (free_area.nr_free)
@@ -66,26 +66,54 @@ default_init(void) {
 
 static void
 default_init_memmap(struct Page *base, size_t n) {
+    // 初始化一个给定地址和大小的空闲块。
+    // base: 指向第一个页面的指。n: 页数。
+
     assert(n > 0);
+
+    // 遍历从 base 开始的每一个页面，
+    // 确保每一页都被预留（PageReserved(p)）。然后清除每一页的标志和属性，并设置其引用计数为0
     struct Page *p = base;
     for (; p != base + n; p ++) {
+        // 从基地址 base 开始，对 n 个连续的物理页面进行初始化
         assert(PageReserved(p));
         p->flags = p->property = 0;
-        set_page_ref(p, 0);
+        set_page_ref(p, 0); // 设置引用计数(page的ref成员)为0
     }
+
+    // 设置基本页面的属性
+    // 空闲块中第一个页的property属性标志整个空闲块中总页数
     base->property = n;
+
+    // 将这个页面标记为空闲块开始的页面
+    // 将page->flag的PG_property位，也就是第1位（总共0-63有64位）设置为1
     SetPageProperty(base);
+
+    // 更新空闲区域的结构中的空闲块的数量
     nr_free += n;
+
+    // 将新的空闲块添加到空闲列表中
+    // 空闲链表为空就直接添加
     if (list_empty(&free_list)) {
         list_add(&free_list, &(base->page_link));
+        // 这个函数将在para2节点插入在para1后面
     } else {
+        // 非空的话就遍历链表，找到合适的位置插入
+
+        // 哨兵节点，表示链表的开始和结束。
         list_entry_t* le = &free_list;
+
+        // 遍历一轮链表
         while ((le = list_next(le)) != &free_list) {
-            struct Page* page = le2page(le, page_link);
+            struct Page* page = le2page(le, page_link); // le2page从给定的链表节点le获取到包含它的struct Page实例。
+            
+            // 找到了合适的位置，链表是排序的，便于后续搜索，插入要维持有序状态
             if (base < page) {
+                // 在当前链表条目之前插入新页面
                 list_add_before(le, &(base->page_link));
                 break;
             } else if (list_next(le) == &free_list) {
+                // 到了链表尾部，循环一轮的最后，直接添加
                 list_add(le, &(base->page_link));
             }
         }
@@ -94,10 +122,16 @@ default_init_memmap(struct Page *base, size_t n) {
 
 static struct Page *
 default_alloc_pages(size_t n) {
+    // 根据首次适应算法从空闲列表中分配所需数量的页
+
     assert(n > 0);
+
+    // 不够分
     if (n > nr_free) {
         return NULL;
     }
+
+    // 遍历空闲列表，找到第一个空闲块大小大于等于n的块
     struct Page *page = NULL;
     list_entry_t *le = &free_list;
     while ((le = list_next(le)) != &free_list) {
@@ -108,50 +142,73 @@ default_alloc_pages(size_t n) {
         }
     }
     if (page != NULL) {
+        // 找到了要分配的页，获取这个块前面的链表条目，并从空闲列表中删除这个块。
         list_entry_t* prev = list_prev(&(page->page_link));
         list_del(&(page->page_link));
-        if (page->property > n) {
-            struct Page *p = page + n;
-            p->property = page->property - n;
-            SetPageProperty(p);
-            list_add(prev, &(p->page_link));
+        if (page->property > n) {   // 找到的空闲块比请求的大，它将被拆分为两部分
+            struct Page *p = page + n;  // p指向第二部分的第一个页面
+            p->property = page->property - n;   // 更新第二部分的空闲块大小
+            SetPageProperty(p); // 设置第二部分的第一个页面的属性，set property bit，标志空闲
+            list_add(prev, &(p->page_link));    // 将第二部分添加到空闲列表中
         }
+
+        // 更新空闲页面计数 nr_free，并清除已分配块的属性标志。
         nr_free -= n;
         ClearPageProperty(page);
     }
     return page;
 }
 
+// 释放一段连续的物理页面，base 是要释放的页面的起始地址，n 是要释放的页面数量
 static void
 default_free_pages(struct Page *base, size_t n) {
     assert(n > 0);
     struct Page *p = base;
     for (; p != base + n; p ++) {
-        assert(!PageReserved(p) && !PageProperty(p));
-        p->flags = 0;
-        set_page_ref(p, 0);
+        assert(!PageReserved(p) && !PageProperty(p)); // 确保页面不是保留的，也不是空闲块的第一个页面
+        p->flags = 0;                                 // 清除页面的标志
+        set_page_ref(p, 0);                           // 设置页面的引用计数为0
     }
-    base->property = n;
-    SetPageProperty(base);
-    nr_free += n;
+    base->property = n;    // 将要释放的页面中的第一个页面的property属性设置为n，表示需要释放n个页面
+    SetPageProperty(base); // 将页面的标志设置为 PG_property，表示这是一个空闲块的第一个页面。
+    nr_free += n;          // 将要释放的页面数量 n 加到空闲页面计数 nr_free 中，表示这些页面现在是空闲的
 
+    
+    /*
+     * 2110049
+     * 用 list_empty 宏检查空闲页面链表是否为空
+     * 如果为空，则将要添加的页面作为链表的头节点，并返回
+     * 否则，函数遍历空闲页面链表，找到要添加的页面在链表中的位置，并将其插入到链表中
+     */
     if (list_empty(&free_list)) {
         list_add(&free_list, &(base->page_link));
     } else {
         list_entry_t* le = &free_list;
-        while ((le = list_next(le)) != &free_list) {
-            struct Page* page = le2page(le, page_link);
+        while ((le = list_next(le)) != &free_list) {    // 遍历一轮链表
+            struct Page *page = le2page(le, page_link); // 使用 le2page 宏将链表节点转换为页面结构体
+            // 比较要添加的页面的地址和当前节点所对应的页面的地址的大小
+            // 保证链表中页面地址的升序排列
             if (base < page) {
                 list_add_before(le, &(base->page_link));
                 break;
             } else if (list_next(le) == &free_list) {
-                list_add(le, &(base->page_link));
+                list_add(le, &(base->page_link));   // 加在链表末尾
             }
         }
     }
 
-    list_entry_t* le = list_prev(&(base->page_link));
-    if (le != &free_list) {
+    // 合并空闲页面链表中相邻的空闲块
+    // 判断空闲块之前的块
+    list_entry_t *le = list_prev(&(base->page_link)); // 取空闲块的前一个页面的链表节点
+    if (le != &free_list)                             // 如果 le 不等于空闲页面链表的头节点，则说明空闲块的前一个页面存在
+    {
+        /* 2110049
+         * 函数使用 le2page 宏将链表节点转换为页面结构体，并将其赋值给指针 p
+         * 如果 p 的 property 字段加上 p 的地址等于 base 的地址，则说明 p 和 base 是相邻的空闲块，可以将它们合并成一个更大的空闲块
+         * 然后使用 ClearPageProperty 宏将 base 的 PG_property 标志位清除
+         * 使用 list_del 宏将 base 从空闲页面链表中删除。
+         * 函数将 base 的地址更新为 p 的地址，表示合并后的空闲块的起始页面为 p。
+         */
         p = le2page(le, page_link);
         if (p + p->property == base) {
             p->property += base->property;
@@ -161,6 +218,7 @@ default_free_pages(struct Page *base, size_t n) {
         }
     }
 
+    // 判断空闲块之后的块
     le = list_next(&(base->page_link));
     if (le != &free_list) {
         p = le2page(le, page_link);
