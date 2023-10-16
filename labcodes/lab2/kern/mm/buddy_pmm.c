@@ -10,14 +10,12 @@
 #define BUDDY_MAX_DEPTH 30
 
 static unsigned int* buddy_page; //用于存储相应大小的页
-static unsigned int buddy_page_num; 
+static unsigned int buddy_page_num; //伙伴页数目
 static unsigned int useable_page_num; //可用的页数目
 static struct Page* useable_page_base;
 
 static void
-buddy_init(void) {
-    /* do nothing */
-}
+buddy_init(void) {}
 
 static void
 buddy_init_memmap(struct Page *base, size_t n) {
@@ -27,8 +25,8 @@ buddy_init_memmap(struct Page *base, size_t n) {
     useable_page_num = 1;
     for (int i = 1;
          (i < BUDDY_MAX_DEPTH) && (useable_page_num + (useable_page_num >> 9) < n);
-         i++, useable_page_num <<= 1)
-        /* do nothing */;
+         i++, useable_page_num <<= 1);
+
     useable_page_num >>= 1;
     buddy_page_num = (useable_page_num >> 9) + 1;
     // 可使用内存页基址
@@ -61,6 +59,9 @@ Page* buddy_alloc_pages(size_t n) {
         return NULL;
     }
     // 找到需要的页区
+    // 先找左孩子，再找右孩子
+    // 以这种树状的形式进行查找很好的避免了我之前用链表想法的问题
+    // 也就是避免了拆开一块地址再重新将其并回
     unsigned int index = 1;
     while(1){
         if (buddy_page[LEFT_CHILD(index)] >= n){
@@ -74,8 +75,8 @@ Page* buddy_alloc_pages(size_t n) {
         }
     }
     // 分配
-    unsigned int size = buddy_page[index];
-    buddy_page[index] = 0;
+    unsigned int size = buddy_page[index]; //整个找到的页面一起分配出去
+    buddy_page[index] = 0; //清零计数，表示在管理页中该节点和其之下的所有结点都不能使用
     struct Page* new_page = &useable_page_base[index * size - useable_page_num];
     for (struct Page* p = new_page; p != new_page + size; p++){
         ClearPageProperty(p);
