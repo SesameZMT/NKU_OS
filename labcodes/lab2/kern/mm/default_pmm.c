@@ -59,40 +59,47 @@ free_area_t free_area;  // 一个空闲区域的结构，其中包含一个空�
 #define nr_free (free_area.nr_free)
 
 static void
-default_init(void) {
-    list_init(&free_list);
-    nr_free = 0;
+default_init(void) {    // 在物理内存分配过程中初始化一个空闲内存块链表和相应的计数器
+    list_init(&free_list);  // 调用 list_init 函数，目的是初始化一个链表结构 free_list ，它用来跟踪可用的物理内存块（或者说是空闲的内存块）。通过初始化 free_list，确保了链表是空的
+    nr_free = 0;    // nr_free 是一个用来记录空闲内存块数量的计数器。通过将其初始化为 0，表示初始时没有任何内存块是空闲的
 }
+/*
+随着物理内存的分配和释放，free_list 链表会动态地更新，
+nr_free 计数器也会相应地增加或减少以反映系统中的空闲内存块数量。
+这有助于操作系统在内存分配请求时找到适当的内存块以分配给进程
+*/
 
 static void
-default_init_memmap(struct Page *base, size_t n) {
+default_init_memmap(struct Page *base, size_t n) {  // 在物理内存分配过程中初始化一个内存页映射表（mem_map）和一个链表（free_list）
     // 初始化一个给定地址和大小的空闲块。
     // base: 指向第一个页面的指。n: 页数。
 
-    assert(n > 0);
+    assert(n > 0);  // 确保传递给函数的页数 n 大于 0
 
     // 遍历从 base 开始的每一个页面，
     // 确保每一页都被预留（PageReserved(p)）。然后清除每一页的标志和属性，并设置其引用计数为0
-    struct Page *p = base;
+    struct Page *p = base;  // 创建一个指向 base 的指针 p，它将用于遍历页表中的所有页
     for (; p != base + n; p ++) {
         // 从基地址 base 开始，对 n 个连续的物理页面进行初始化
-        assert(PageReserved(p));
-        p->flags = p->property = 0;
-        set_page_ref(p, 0); // 设置引用计数(page的ref成员)为0
+        assert(PageReserved(p));    // 检查页 p 是否被保留。在内存初始化过程中，通常某些页会被保留用于特定目的，例如内核代码或者设备驱动程序，这些页不应该用于通用内存分配
+        p->flags = p->property = 0; // 将页的标志（flags）和属性（property）设置为零，表示这些页当前没有特殊的标志或属性。
+        set_page_ref(p, 0); // 设置引用计数(page的ref成员)为0,表示这些页当前没有被引用
     }
 
     // 设置基本页面的属性
     // 空闲块中第一个页的property属性标志整个空闲块中总页数
-    base->property = n;
+    base->property = n; // 将 base 页的属性字段设置为 n，表示该页表映射了多少个页
 
     // 将这个页面标记为空闲块开始的页面
     // 将page->flag的PG_property位，也就是第1位（总共0-63有64位）设置为1
-    SetPageProperty(base);
+    SetPageProperty(base);  // 设置 base 页的一个特殊标志，表示这个页是页表
 
     // 更新空闲区域的结构中的空闲块的数量
-    nr_free += n;
+    nr_free += n;   // 将系统中的空闲页数增加 n，因为在初始化过程中，这些页是空闲的
 
-    // 将新的空闲块添加到空闲列表中
+    // 将初始化的页添加到 free_list 链表中。
+    // 如果 free_list 为空，直接将初始化的页添加为链表的第一个元素。
+    // 如果 free_list 不为空，它会遍历链表并将初始化的页插入到适当的位置，以保持链表的有序性。
     // 空闲链表为空就直接添加
     if (list_empty(&free_list)) {
         list_add(&free_list, &(base->page_link));
@@ -122,21 +129,23 @@ default_init_memmap(struct Page *base, size_t n) {
 
 static struct Page *
 default_alloc_pages(size_t n) {
-    // 根据首次适应算法从空闲列表中分配所需数量的页
+    // 在物理内存分配过程中，尝试分配连续的 n 个物理内存页
 
-    assert(n > 0);
+    assert(n > 0);  // 确保请求的页数 n 大于 0
 
-    // 不够分
+    // nr_free 记录了当前可用的空闲页数量，如果请求的页数 n 大于可用的页数，函数返回 NULL
+    // 表示无法满足分配请求
     if (n > nr_free) {
         return NULL;
     }
 
     // 遍历空闲列表，找到第一个空闲块大小大于等于n的块
-    struct Page *page = NULL;
-    list_entry_t *le = &free_list;
-    while ((le = list_next(le)) != &free_list) {
-        struct Page *p = le2page(le, page_link);
-        if (p->property >= n) {
+    struct Page *page = NULL;   // 初始化一个指向 Page 结构的指针 page，用于记录已分配的起始页
+    list_entry_t *le = &free_list;  // 初始化一个链表元素指针 le，指向空闲页链表的头部
+    while ((le = list_next(le)) != &free_list) {    // 遍历空闲页链表
+        struct Page *p = le2page(le, page_link);    // 将链表元素 le 转换为 Page 结构，从而可以访问每个空闲页的属性
+        if (p->property >= n) { 
+            // 检查当前空闲页 p 是否有足够多的连续页来满足请求。如果是，将当前页 p 分配给 page 变量，并退出循环
             page = p;
             break;
         }
