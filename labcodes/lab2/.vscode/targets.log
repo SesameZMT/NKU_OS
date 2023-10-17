@@ -1,0 +1,1 @@
+make.exe all -f C:\Users\42975\Desktop\git\labcodes\lab1\Makefile --print-data-base --no-builtin-variables --no-builtin-rules --question
