@@ -217,7 +217,7 @@ void pmm_init(void) {
 //  create: a logical value to decide if alloc a page for PT
 // return vaule: the kernel virtual address of this pte
 // 寻找(有必要的时候分配)一个页表项
-pte_t *get_pte(pde_t *pgdir, uintptr_t la, bool create) {
+pte_t *get_pte(pde_t *pgdir, uintptr_t la, bool create) {   // 获取线性地址 la 对应的页表项，如果页表项不存在，则根据需要（create 参数）创建页表项
     /*
      *
      * If you need to visit a physical address, please use KADDR()

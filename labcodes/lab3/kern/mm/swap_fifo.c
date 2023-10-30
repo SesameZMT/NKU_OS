@@ -31,7 +31,7 @@ list_entry_t pra_list_head;
  *              Now, From the memory control struct mm_struct, we can access FIFO PRA
  */
 static int
-_fifo_init_mm(struct mm_struct *mm)
+_fifo_init_mm(struct mm_struct *mm) //用于初始化FIFO算法，管理所有可换出的页面。通过list_init初始化FIFO队列，并将mm->sm_priv指向pra_list_head。
 {     
      list_init(&pra_list_head);
      mm->sm_priv = &pra_list_head;
@@ -42,12 +42,16 @@ _fifo_init_mm(struct mm_struct *mm)
  * (3)_fifo_map_swappable: According FIFO PRA, we should link the most recent arrival page at the back of pra_list_head qeueue
  */
 static int
-_fifo_map_swappable(struct mm_struct *mm, uintptr_t addr, struct Page *page, int swap_in)
+_fifo_map_swappable(struct mm_struct *mm, uintptr_t addr, struct Page *page, int swap_in)   // 将所需页面连接到pra_list_head的末尾，表示最近进入内存。通过list_add将页面添加到队列末尾。
 {
     list_entry_t *head=(list_entry_t*) mm->sm_priv;
     list_entry_t *entry=&(page->pra_page_link);
  
-    assert(entry != NULL && head != NULL);
+    assert(entry != NULL && head != NULL);  
+    /* 断言检查,用于在程序中确定某个条件是否为真的工具，如果条件为假，将输出诊断信息并终止程序执行。
+    宏的定义对表达式进行检查，如果表达式 (expr) 的结果为真（非零），则不执行任何操作，返回值为0。
+    如果表达式的结果为假（即0），则会调用 __assert_fail 函数输出诊断信息，并包含 #expr 所表示的表达式、__FILE__、__LINE__ 以及 __ASSERT_FUNCTION 等信息。
+    */
     //record the page access situlation
 
     //(1)link the most recent arrival page at the back of the pra_list_head qeueue.
@@ -59,26 +63,26 @@ _fifo_map_swappable(struct mm_struct *mm, uintptr_t addr, struct Page *page, int
  *                            then set the addr of addr of this page to ptr_page.
  */
 static int
-_fifo_swap_out_victim(struct mm_struct *mm, struct Page ** ptr_page, int in_tick)
+_fifo_swap_out_victim(struct mm_struct *mm, struct Page ** ptr_page, int in_tick)   // 根据FIFO算法，从队列前部取出最早进入内存的页面。通过list_prev取得队列的最早进入的页面，然后list_del移除该页面，将其地址设置到ptr_page指针中。
 {
-     list_entry_t *head=(list_entry_t*) mm->sm_priv;
+     list_entry_t *head=(list_entry_t*) mm->sm_priv;    // 获取置换队列的头部
          assert(head != NULL);
      assert(in_tick==0);
      /* Select the victim */
      //(1)  unlink the  earliest arrival page in front of pra_list_head qeueue
      //(2)  set the addr of addr of this page to ptr_page
-    list_entry_t* entry = list_prev(head);
-    if (entry != head) {
+    list_entry_t* entry = list_prev(head);  // 取得队列的最早进入的页面
+    if (entry != head) {    // 如果 entry 不是头部指针，即队列不为空，函数使用 list_del 来移除该页面，并将其地址设置到 ptr_page 指针中。
         list_del(entry);
         *ptr_page = le2page(entry, pra_page_link);
-    } else {
+    } else {    // 如果队列为空，或者为空间不足时，则将 ptr_page 指向 NULL，表示没有可供置换的页面。
         *ptr_page = NULL;
     }
     return 0;
 }
 
 static int
-_fifo_check_swap(void) {
+_fifo_check_swap(void) {    // 测试函数，模拟了多次页面置换操作，进行了多次对不同内存地址的写入操作，模拟了缺页异常的过程。
     cprintf("write Virt Page c in fifo_check_swap\n");
     *(unsigned char *)0x3000 = 0x0c;
     assert(pgfault_num==4);

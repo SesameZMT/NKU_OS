@@ -60,7 +60,7 @@ static void check_pgfault(void);
 
 // mm_create -  alloc a mm_struct & initialize it.
 struct mm_struct *
-mm_create(void) {
+mm_create(void) {   // 创建内存管理结构体并初始化
     struct mm_struct *mm = kmalloc(sizeof(struct mm_struct));
 
     if (mm != NULL) {
@@ -77,7 +77,7 @@ mm_create(void) {
 
 // vma_create - alloc a vma_struct & initialize it. (addr range: vm_start~vm_end)
 struct vma_struct *
-vma_create(uintptr_t vm_start, uintptr_t vm_end, uint_t vm_flags) {
+vma_create(uintptr_t vm_start, uintptr_t vm_end, uint_t vm_flags) { // 创建一个虚拟内存区域结构体 struct vma_struct，分配内存并对其进行初始化
     struct vma_struct *vma = kmalloc(sizeof(struct vma_struct));
 
     if (vma != NULL) {
@@ -89,7 +89,7 @@ vma_create(uintptr_t vm_start, uintptr_t vm_end, uint_t vm_flags) {
 }
 
 
-// find_vma - find a vma  (vma->vm_start <= addr <= vma_vm_end)
+// find_vma - find a vma  (vma->vm_start <= addr <= vma_vm_end) 查找vma（vma->vm_start <= addr <= vma_vm_end）
 struct vma_struct *
 find_vma(struct mm_struct *mm, uintptr_t addr) {
     struct vma_struct *vma = NULL;
@@ -117,7 +117,7 @@ find_vma(struct mm_struct *mm, uintptr_t addr) {
 }
 
 
-// check_vma_overlap - check if vma1 overlaps vma2 ?
+// check_vma_overlap - check if vma1 overlaps vma2 ?    检查vma1和vma2是否重叠？
 static inline void
 check_vma_overlap(struct vma_struct *prev, struct vma_struct *next) {
     assert(prev->vm_start < prev->vm_end);

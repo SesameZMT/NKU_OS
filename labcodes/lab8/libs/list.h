@@ -38,7 +38,7 @@ static inline void __list_del(list_entry_t *prev, list_entry_t *next) __attribut
  * @elm:        new entry to be initialized
  * */
 static inline void
-list_init(list_entry_t *elm) {
+list_init(list_entry_t *elm) {  // 初始化一个链表节点。给定一个名为 elm 的链表节点，此函数将该节点初始化为一个没有其他节点连接的孤立节点，意味着该节点是链表中唯一的节点
     elm->prev = elm->next = elm;
 }
 
@@ -51,7 +51,7 @@ list_init(list_entry_t *elm) {
  * is already in the list.
  * */
 static inline void
-list_add(list_entry_t *listelm, list_entry_t *elm) {
+list_add(list_entry_t *listelm, list_entry_t *elm) {    // 将 elm 元素添加到 listelm 元素的后面
     list_add_after(listelm, elm);
 }
 
@@ -77,7 +77,7 @@ list_add_before(list_entry_t *listelm, list_entry_t *elm) {
  * is already in the list.
  * */
 static inline void
-list_add_after(list_entry_t *listelm, list_entry_t *elm) {
+list_add_after(list_entry_t *listelm, list_entry_t *elm) {  // 将elm添加到列表中的listelm 之后。内部调用 __list_add，将元素 elm 添加到 listelm 之后，以及 listelm->next 之前
     __list_add(elm, listelm, listelm->next);
 }
 
@@ -139,7 +139,7 @@ list_prev(list_entry_t *listelm) {
  * the prev/next entries already!
  * */
 static inline void
-__list_add(list_entry_t *elm, list_entry_t *prev, list_entry_t *next) {
+__list_add(list_entry_t *elm, list_entry_t *prev, list_entry_t *next) { // 将elm插入到列表中 prev 和 next 之间。将 prev 的下一个元素指向 elm，同时将 next 的前一个元素指向 elm，然后将 elm 的前一个元素指向 prev，后一个元素指向 next。
     prev->next = next->prev = elm;
     elm->next = next;
     elm->prev = prev;

@@ -1,5 +1,6 @@
 {
     "files.associations": {
         "pmm.h": "c"
-    }
+    },
+    "cmake.sourceDirectory": "/home/starx/myfile/github/OperatingSystemStarx/2023-os_fall_homework/labcodes/lab3"
 }
