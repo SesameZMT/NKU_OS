@@ -123,7 +123,8 @@ static int pgfault_handler(struct trapframe *tf) {
 static volatile int in_swap_tick_event = 0;
 extern struct mm_struct *check_mm_struct;
 
-void interrupt_handler(struct trapframe *tf) {
+// 根据传入的 trapframe 结构体（用于保存处理异常或中断时寄存器状态和异常原因等信息）的 cause 字段，对中断原因进行识别和处理。
+void interrupt_handler(struct trapframe *tf) {  
     intptr_t cause = (tf->cause << 1) >> 1;
     switch (cause) {
         case IRQ_U_SOFT:
@@ -176,8 +177,8 @@ void interrupt_handler(struct trapframe *tf) {
     }
 }
 
-
-void exception_handler(struct trapframe *tf) {
+// 根据发生的异常类型（tf->cause）来进行异常处理(打印出相应的异常类型),如果是页面访问异常，它会调用 pgfault_handler 函数进行页面错误处理
+void exception_handler(struct trapframe *tf) {  
     int ret;
     switch (tf->cause) {
         case CAUSE_MISALIGNED_FETCH:
@@ -253,6 +254,7 @@ void exception_handler(struct trapframe *tf) {
  * the code in kern/trap/trapentry.S restores the old CPU state saved in the
  * trapframe and then uses the iret instruction to return from the exception.
  * */
+// 区分中断（interrupts）和异常（exceptions）,当 tf->cause 是负数时，这表示是中断。当 tf->cause 是非负数时，表示是异常。
 void trap(struct trapframe *tf) {
     // dispatch based on what type of trap occurred
     if ((intptr_t)tf->cause < 0) {

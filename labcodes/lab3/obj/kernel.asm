@@ -2950,7 +2950,7 @@ ffffffffc020176c <get_pte>:
 //  create: a logical value to decide if alloc a page for PT
 // return vaule: the kernel virtual address of this pte
 // 寻找(有必要的时候分配)一个页表项
-pte_t *get_pte(pde_t *pgdir, uintptr_t la, bool create) {
+pte_t *get_pte(pde_t *pgdir, uintptr_t la, bool create) {   // 获取线性地址 la 对应的页表项，如果页表项不存在，则根据需要（create 参数）创建页表项
 ffffffffc020176c:	715d                	addi	sp,sp,-80
 ffffffffc020176e:	fc26                	sd	s1,56(sp)
      * flags bit : Writeable
@@ -2966,7 +2966,7 @@ ffffffffc020177a:	94aa                	add	s1,s1,a0
     // 当下一级页表不存在，则给其分配一页，创造新的页表
     if (!(*pdep1 & PTE_V)) {
 ffffffffc020177c:	6094                	ld	a3,0(s1)
-pte_t *get_pte(pde_t *pgdir, uintptr_t la, bool create) {
+pte_t *get_pte(pde_t *pgdir, uintptr_t la, bool create) {   // 获取线性地址 la 对应的页表项，如果页表项不存在，则根据需要（create 参数）创建页表项
 ffffffffc020177e:	f84a                	sd	s2,48(sp)
 ffffffffc0201780:	f44e                	sd	s3,40(sp)
 ffffffffc0201782:	f052                	sd	s4,32(sp)
@@ -2977,7 +2977,7 @@ ffffffffc020178a:	e85a                	sd	s6,16(sp)
 ffffffffc020178c:	e45e                	sd	s7,8(sp)
     if (!(*pdep1 & PTE_V)) {
 ffffffffc020178e:	0016f793          	andi	a5,a3,1
-pte_t *get_pte(pde_t *pgdir, uintptr_t la, bool create) {
+pte_t *get_pte(pde_t *pgdir, uintptr_t la, bool create) {   // 获取线性地址 la 对应的页表项，如果页表项不存在，则根据需要（create 参数）创建页表项
 ffffffffc0201792:	892e                	mv	s2,a1
 ffffffffc0201794:	8a32                	mv	s4,a2
 ffffffffc0201796:	00010997          	auipc	s3,0x10
@@ -6151,7 +6151,7 @@ ffffffffc0203472 <check_vma_overlap.isra.0.part.1>:
 }
 
 
-// check_vma_overlap - check if vma1 overlaps vma2 ?
+// check_vma_overlap - check if vma1 overlaps vma2 ?    检查vma1和vma2是否重叠？
 static inline void
 check_vma_overlap(struct vma_struct *prev, struct vma_struct *next) {
 ffffffffc0203472:	1141                	addi	sp,sp,-16
@@ -6171,11 +6171,11 @@ ffffffffc0203490:	e406                	sd	ra,8(sp)
 ffffffffc0203492:	ee3fc0ef          	jal	ra,ffffffffc0200374 <__panic>
 
 ffffffffc0203496 <mm_create>:
-mm_create(void) {
+mm_create(void) {   // 创建内存管理结构体并初始化
 ffffffffc0203496:	1141                	addi	sp,sp,-16
     struct mm_struct *mm = kmalloc(sizeof(struct mm_struct));
 ffffffffc0203498:	03000513          	li	a0,48
-mm_create(void) {
+mm_create(void) {   // 创建内存管理结构体并初始化
 ffffffffc020349c:	e022                	sd	s0,0(sp)
 ffffffffc020349e:	e406                	sd	ra,8(sp)
     struct mm_struct *mm = kmalloc(sizeof(struct mm_struct));
@@ -6217,13 +6217,13 @@ ffffffffc02034de:	0141                	addi	sp,sp,16
 ffffffffc02034e0:	8082                	ret
 
 ffffffffc02034e2 <vma_create>:
-vma_create(uintptr_t vm_start, uintptr_t vm_end, uint_t vm_flags) {
+vma_create(uintptr_t vm_start, uintptr_t vm_end, uint_t vm_flags) { // 创建一个虚拟内存区域结构体 struct vma_struct，分配内存并对其进行初始化
 ffffffffc02034e2:	1101                	addi	sp,sp,-32
 ffffffffc02034e4:	e04a                	sd	s2,0(sp)
 ffffffffc02034e6:	892a                	mv	s2,a0
     struct vma_struct *vma = kmalloc(sizeof(struct vma_struct));
 ffffffffc02034e8:	03000513          	li	a0,48
-vma_create(uintptr_t vm_start, uintptr_t vm_end, uint_t vm_flags) {
+vma_create(uintptr_t vm_start, uintptr_t vm_end, uint_t vm_flags) { // 创建一个虚拟内存区域结构体 struct vma_struct，分配内存并对其进行初始化
 ffffffffc02034ec:	e822                	sd	s0,16(sp)
 ffffffffc02034ee:	e426                	sd	s1,8(sp)
 ffffffffc02034f0:	ec06                	sd	ra,24(sp)
