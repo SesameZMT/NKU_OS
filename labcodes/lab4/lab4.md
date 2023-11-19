@@ -63,8 +63,7 @@ local_intr_restore(x) 来实现关、开中断。
 
 
 
-
-
-
 #### 扩展练习 Challenge：
 • 说明语句 local_intr_save(intr_flag);....local_intr_restore(intr_flag); 是如何实现开关中断的？
+在 `local_intr_save` 宏中，`x = __intr_save();` 会调用 `__intr_save()` 函数来禁用中断、保存当前中断状态并将其存储在 `intr_flag` 变量中。而在 `local_intr_restore` 宏中，`__intr_restore(x);` 会使用之前保存的中断状态来恢复中断。
+这种实现方式的核心思想是使用函数来禁用和恢复中断，并通过变量传递来保存和恢复中断状态。
