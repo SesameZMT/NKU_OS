@@ -11,16 +11,58 @@
 本实验依赖实验 1/2/3。请把你做的实验 1/2/3 的代码填入本实验中代码中有“LAB1”,“LAB2”,“LAB3”的注释相应部分。
 
 #### 练习 1：分配并初始化一个进程控制块（需要编码）
-alloc_proc 函数（位于 kern/process/proc.c 中）负责分配并返回一个新的 struct proc_struct 结构，用于存储新建
-立的内核线程的管理信息。ucore 需要对这个结构进行最基本的初始化，你需要完成这个初始化过程。
+alloc_proc 函数（位于 kern/process/proc.c 中）负责分配并返回一个新的struct proc_struct 结构，用于存储新建立的内核线程的管理信息。ucore 需要对这个结构进行最基本的初始化，你需要完成这个初始化过程。
 【提示】在 alloc_proc 函数的实现中，需要初始化的 proc_struct 结构中的成员变量至少包括：
 state/pid/runs/kstack/need_resched/parent/mm/context/tf/cr3/flags/name。
 请在实验报告中简要说明你的设计实现过程。请回答如下问题：
-• 请说明 proc_struct 中 struct context context 和 struct trapframe *tf 成员变量含义和
-在本实验中的作用是啥？（提示通过看代码和编程调试可以判断出来）
+• 请说明 proc_struct 中 struct context context 和 struct trapframe *tf 成员变量含义和在本实验中的作用是啥？（提示通过看代码和编程调试可以判断出来）
 
+在ucore中，`struct proc_struct` 结构体是用于存储进程或线程的管理信息的。在 `alloc_proc` 函数中，对 `struct proc_struct` 结构体进行初始化。
 
+```c
+struct proc_struct *alloc_proc(void) {
+    struct proc_struct *proc = kmalloc(sizeof(struct proc_struct));
+    if (proc != NULL) {
+        // 初始化proc_struct中的各个成员变量
+        proc->state = PROC_UNINIT; // 进程状态，未初始化
+        proc->pid = -1; // 进程ID，初始化为-1
+        proc->runs = 0; // 进程运行次数
+        proc->kstack = 0; // 进程内核栈
+        proc->need_resched = 0; // 是否需要调度
+        proc->parent = NULL; // 父进程指针
+        proc->mm = NULL; // 内存空间管理指针
+        memset(&(proc->context), 0, sizeof(struct context)); // 初始化上下文
+        proc->tf = NULL; // 中断帧指针
+        proc->cr3 = boot_cr3; // 页表基址寄存器
+        proc->flags = 0; // 进程标志位
+        memset(proc->name, 0, PROC_NAME_LEN); // 进程名称
+    }
+    return proc;
+}
+```
 
+在上述代码中，`struct context` 和 `struct trapframe *tf` 是 `proc_struct` 中的两个重要成员变量：
+`struct context context`: 这个结构体用于保存进程在内核态运行时的上下文信息，包括寄存器的值等。通过保存和恢复这个上下文，可以实现进程的上下文切换。
+`struct trapframe *tf`: 这是一个指向中断帧的指针，用于保存进程在发生中断或异常时的现场信息。中断帧中包含了中断发生时处理器的状态，如寄存器值、指令指针等。在进程切换或中断处理时，需要保存和恢复这个中断帧。
+
+设计实现过程：这段代码实现了一个 `alloc_proc` 函数，用于分配并初始化一个进程控制块 (`struct proc_struct`)。
+1. 分配内存空间： 首先通过 `kmalloc(sizeof(struct proc_struct))` 分配了一个存储进程控制信息的内存空间。
+2. 检查分配情况： 然后检查是否成功分配内存，如果成功则进行初始化。
+3. 初始化进程控制块成员变量： 对进程控制块中的各个成员变量进行初始化操作：
+   `state`: 设置进程状态为未初始化状态 (`PROC_UNINIT`)。
+   `pid`: 初始化进程ID为-1，表示未分配。
+   `runs`: 运行次数初始化为0，记录进程被调度执行的次数。
+   `kstack`: 进程内核栈初始化为0，表示未分配内核栈。
+   `need_resched`: 是否需要调度初始化为0，表示不需要调度。
+   `parent`: 父进程指针初始化为空，表示没有父进程。
+   `mm`: 内存空间管理指针初始化为空，表示未分配内存空间。
+   `context`: 使用 `memset` 将进程的上下文信息清零，确保初始化为0值。
+   `tf`: 中断帧指针初始化为空，表示没有中断帧信息。
+   `cr3`: 页表基址寄存器初始化为 `boot_cr3`，可能是指向启动时的页表基址。
+   `flags`: 进程标志位初始化为0。
+   `name`: 进程名称通过 `memset` 初始化为空，长度为 `PROC_NAME_LEN`。
+4. 返回进程控制块指针： 最后返回已经初始化的进程控制块指针。
+这个函数主要是为了提供一个新的进程控制块，为一个新建立的内核线程提供管理信息，并将其基本成员变量初始化为合适的初始值。
 
 #### 练习 2：为新创建的内核线程分配资源（需要编码）
 创建一个内核线程需要分配和设置好很多资源。kernel_thread 函数通过调用 do_fork 函数完成具体内核线程
@@ -60,6 +102,7 @@ local_intr_restore(x) 来实现关、开中断。
 • 在本实验的执行过程中，创建且运行了几个内核线程？
 完成代码编写后，编译并运行代码：make qemu
 如果可以得到如附录 A 所示的显示内容（仅供参考，不是标准答案输出），则基本正确。
+
 
 
 
