@@ -288,6 +288,7 @@ setup_kstack(struct proc_struct *proc) {
 }
 
 // put_kstack - free the memory space of process kernel stack
+// put_kstack - 用来释放进程的内核栈
 static void
 put_kstack(struct proc_struct *proc) {
     free_pages(kva2page((void *)(proc->kstack)), KSTACKPAGE);
@@ -295,6 +296,7 @@ put_kstack(struct proc_struct *proc) {
 
 // copy_mm - process "proc" duplicate OR share process "current"'s mm according clone_flags
 //         - if clone_flags & CLONE_VM, then "share" ; else "duplicate"
+// copy_mm - 用来复制父进程的内存管理信息
 static int
 copy_mm(uint32_t clone_flags, struct proc_struct *proc) {
     assert(current->mm == NULL);
@@ -304,6 +306,7 @@ copy_mm(uint32_t clone_flags, struct proc_struct *proc) {
 
 // copy_thread - setup the trapframe on the  process's kernel stack top and
 //             - setup the kernel entry point and stack of process
+// copy_thread - 用来复制父进程的trapframe信息
 static void
 copy_thread(struct proc_struct *proc, uintptr_t esp, struct trapframe *tf) {
     proc->tf = (struct trapframe *)(proc->kstack + KSTACKSIZE - sizeof(struct trapframe));
@@ -313,7 +316,7 @@ copy_thread(struct proc_struct *proc, uintptr_t esp, struct trapframe *tf) {
     proc->tf->gpr.a0 = 0;
     proc->tf->gpr.sp = (esp == 0) ? (uintptr_t)proc->tf : esp;
 
-    proc->context.ra = (uintptr_t)forkret;
+    proc->context.ra = (uintptr_t)forkret;  // 设置返回地址为forkret函数
     proc->context.sp = (uintptr_t)(proc->tf);
 }
 

@@ -5,7 +5,7 @@
 .globl switch_to
 switch_to:
     # save from's registers
-    STORE ra, 0*REGBYTES(a0)
+    STORE ra, 0*REGBYTES(a0)    // a0 is from
     STORE sp, 1*REGBYTES(a0)
     STORE s0, 2*REGBYTES(a0)
     STORE s1, 3*REGBYTES(a0)
