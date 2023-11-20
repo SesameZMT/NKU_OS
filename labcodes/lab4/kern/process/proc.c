@@ -192,6 +192,7 @@ get_pid(void) {
 
 // proc_run - make process "proc" running on cpu
 // NOTE: before call switch_to, should load  base addr of "proc"'s new PDT
+// proc_run - 用来切换到一个新的进程（线程）
 void
 proc_run(struct proc_struct *proc) {
     // 首先判断要切换到的进程是不是当前进程，若是则不需进行任何处理。
@@ -207,16 +208,16 @@ proc_run(struct proc_struct *proc) {
         */
        // 调用local_intr_save和local_intr_restore函数避免在进程切换过程中出现中断。
         bool intr_flag;
-        local_intr_save(intr_flag);
+        local_intr_save(intr_flag); // 关闭中断
 
-        struct proc_struct *prev = current;
-        struct proc_struct *next = proc;
+        struct proc_struct *prev = current; // 保存当前进程
+        struct proc_struct *next = proc;    // 保存下一个进程
 
-        current = proc;
-        lcr3(proc->cr3);
-        switch_to(&(prev->context), &(next->context));
+        current = proc; // 将当前进程设置为下一个进程
+        lcr3(proc->cr3);    // 切换到下一个进程的页表
+        switch_to(&(prev->context), &(next->context));  // 进行上下文切换
 
-        local_intr_restore(intr_flag);
+        local_intr_restore(intr_flag);  // 开启中断
     }
 }
 

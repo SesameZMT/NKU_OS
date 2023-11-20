@@ -5,6 +5,7 @@
 #include <intr.h>
 #include <riscv.h>
 
+// 保存中断状态
 static inline bool __intr_save(void) {
     if (read_csr(sstatus) & SSTATUS_SIE) {
         intr_disable();
@@ -13,6 +14,7 @@ static inline bool __intr_save(void) {
     return 0;
 }
 
+// 恢复中断状态
 static inline void __intr_restore(bool flag) {
     if (flag) {
         intr_enable();

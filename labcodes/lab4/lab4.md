@@ -161,9 +161,11 @@ bad_fork_cleanup_proc:  // 释放进程
 }
 ```
 
-这段代码实现创建一个新进程（子进程）的功能。在这段代码中，我们首先定义了一个返回值变量 `ret` 并初始化为 `-E_NO_FREE_PROC`，表示没有空闲的进程；接着声明了一个指向 `struct proc_struct` 类型的指针 `proc`，用于指向新创建的进程；然后检查当前进程数量是否已达到最大进程数 `MAX_PROCESS`，如果是，则跳转到 `fork_out` 标签处，表示创建新进程失败；如果未达到最大进程数，则会接着执行后面的代码；将 `ret` 的值设置为 `-E_NO_MEM`，表示内存不足；调用 `alloc_proc()` 函数分配一个 `proc_struct` 结构体，用于表示新进程，如果分配失败，跳转到 `fork_out` 标签处，表示创建失败；将新进程的父进程指针 `parent` 设置为当前进程；调用 `setup_kstack(proc)` 函数为子进程分配内核栈，如果分配失败，跳转到 `bad_fork_cleanup_kstack` 标签处，释放内核栈并返回错误；调用 `copy_mm(clone_flags, proc)` 函数复制父进程的内存管理信息到子进程，如果复制失败，跳转到 `bad_fork_cleanup_proc` 标签处，释放进程并返回错误；调用 `copy_thread(proc, stack, tf)` 函数复制父进程的上下文信息到子进程；关闭中断，以确保在修改全局数据结构时不会被中断；为子进程分配一个唯一的进程 ID（PID），将子进程添加到进程哈希表中，将子进程添加到进程列表中，增加进程数量计数器，再开启中断，然后唤醒子进程，使其变为可运行状态，将子进程的 PID 赋值给 `ret`，返回 `ret`。
+``do_fork``这段代码实现创建一个新进程（子进程）的功能。在这段代码中，我们首先定义了一个返回值变量 `ret` 并初始化为 `-E_NO_FREE_PROC`，表示没有空闲的进程；接着声明了一个指向 `struct proc_struct` 类型的指针 `proc`，用于指向新创建的进程；然后检查当前进程数量是否已达到最大进程数 `MAX_PROCESS`，如果是，则跳转到 `fork_out` 标签处，表示创建新进程失败；如果未达到最大进程数，则会接着执行后面的代码；将 `ret` 的值设置为 `-E_NO_MEM`，表示内存不足；调用 `alloc_proc()` 函数分配一个 `proc_struct` 结构体，用于表示新进程，如果分配失败，跳转到 `fork_out` 标签处，表示创建失败；将新进程的父进程指针 `parent` 设置为当前进程；调用 `setup_kstack(proc)` 函数为子进程分配内核栈，如果分配失败，跳转到 `bad_fork_cleanup_kstack` 标签处，释放内核栈并返回错误；调用 `copy_mm(clone_flags, proc)` 函数复制父进程的内存管理信息到子进程，如果复制失败，跳转到 `bad_fork_cleanup_proc` 标签处，释放进程并返回错误；调用 `copy_thread(proc, stack, tf)` 函数复制父进程的上下文信息到子进程；关闭中断，以确保在修改全局数据结构时不会被中断；为子进程分配一个唯一的进程 ID（PID），将子进程添加到进程哈希表中，将子进程添加到进程列表中，增加进程数量计数器，再开启中断，然后唤醒子进程，使其变为可运行状态，将子进程的 PID 赋值给 `ret`，返回 `ret`。
 
 注：如果在上述过程中出现错误，会跳转到相应的标签处进行清理操作，并返回错误码。
+
+在此代码中，``do_fork``函数通过调用``get_pid()``函数为新进程分配一个唯一的进程ID（PID）。这个函数会从全局的PID池中获取一个未分配使用的PID分配给新的进程，因此，ucore 做到了给每个新 ``fork`` 的线程一个唯一的 ``id``.
 
 
 #### 练习 3：编写 proc_run 函数（需要编码）
@@ -181,6 +183,42 @@ local_intr_restore(x) 来实现关、开中断。
 • 在本实验的执行过程中，创建且运行了几个内核线程？
 完成代码编写后，编译并运行代码：make qemu
 如果可以得到如附录 A 所示的显示内容（仅供参考，不是标准答案输出），则基本正确。
+
+
+```cpp
+// proc_run - 用来切换到一个新的进程（线程）
+void
+proc_run(struct proc_struct *proc) {
+    // 首先判断要切换到的进程是不是当前进程，若是则不需进行任何处理。
+    if (proc != current) {
+        // LAB4:EXERCISE3 YOUR CODE
+        /*
+        * Some Useful MACROs, Functions and DEFINEs, you can use them in below implementation.
+        * MACROs or Functions:
+        *   local_intr_save():        Disable interrupts
+        *   local_intr_restore():     Enable Interrupts
+        *   lcr3():                   Modify the value of CR3 register
+        *   switch_to():              Context switching between two processes
+        */
+       // 调用local_intr_save和local_intr_restore函数避免在进程切换过程中出现中断。
+        bool intr_flag;
+        local_intr_save(intr_flag); // 关闭中断
+
+        struct proc_struct *prev = current; // 保存当前进程
+        struct proc_struct *next = proc;    // 保存下一个进程
+
+        current = proc; // 将当前进程设置为下一个进程
+        lcr3(proc->cr3);    // 切换到下一个进程的页表
+        switch_to(&(prev->context), &(next->context));  // 进行上下文切换
+
+        local_intr_restore(intr_flag);  // 开启中断
+    }
+}
+```
+
+``pron_run``实现了切换到一个新的进程（线程）的功能。在这段代码中，首先，需要判断切换到的进程（线程）是否是当前进程（线程），如果是，则无需进行任何处理；如果要切换的进程（线程）不是当前进程（线程），则进行进程切换操作；调用 `local_intr_save(intr_flag)` 函数关闭中断，以确保在进程切换过程中不会被中断；接着声明两个指向 `struct proc_struct` 类型的指针 `prev` 和 `next`，分别用于保存当前进程和要切换到的下一个进程，将当前进程指针 `current` 设置为要切换到的下一个进程；调用 `lcr3(proc->cr3)` 函数切换到下一个进程的页表，即将页表寄存器 CR3 的值设置为下一个进程的页表基址；调用 `switch_to(&(prev->context), &(next->context))` 函数进行上下文切换，将当前进程的上下文保存到 `prev->context` 中，将下一个进程的上下文恢复到 `next->context` 中；最后再调用 `local_intr_restore(intr_flag)` 函数开启中断，恢复中断状态。
+
+通过以上步骤，进程切换完成，当前进程被切换为要切换到的下一个进程（线程）。
 
 
 
