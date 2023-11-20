@@ -11,8 +11,8 @@
  * High bits are more random, so we use them.
  * */
 uint32_t
-hash32(uint32_t val, unsigned int bits) {
-    uint32_t hash = val * GOLDEN_RATIO_PRIME_32;
-    return (hash >> (32 - bits));
+hash32(uint32_t val, unsigned int bits) { // 32位的hash
+    uint32_t hash = val * GOLDEN_RATIO_PRIME_32; // 乘以一个素数
+    return (hash >> (32 - bits)); // 取高位
 }
 
