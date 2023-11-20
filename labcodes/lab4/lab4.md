@@ -82,9 +82,88 @@ struct proc_struct *alloc_proc(void) {
 请在实验报告中简要说明你的设计实现过程。请回答如下问题：
 • 请说明 ucore 是否做到给每个新 fork 的线程一个唯一的 id？请说明你的分析和理由。
 
+```cpp
+// do_fork - 用来创建一个新的进程（子进程）
+int
+do_fork(uint32_t clone_flags, uintptr_t stack, struct trapframe *tf) {
+    int ret = -E_NO_FREE_PROC;
+    struct proc_struct *proc;
+    if (nr_process >= MAX_PROCESS) {
+        goto fork_out;
+    }
+    ret = -E_NO_MEM;
+    //LAB4:EXERCISE2 YOUR CODE
+    /*
+     * Some Useful MACROs, Functions and DEFINEs, you can use them in below implementation.
+     * MACROs or Functions:
+     *   alloc_proc:   create a proc struct and init fields (lab4:exercise1)
+     *   setup_kstack: alloc pages with size KSTACKPAGE as process kernel stack
+     *   copy_mm:      process "proc" duplicate OR share process "current"'s mm according clone_flags
+     *                 if clone_flags & CLONE_VM, then "share" ; else "duplicate"
+     *   copy_thread:  setup the trapframe on the  process's kernel stack top and
+     *                 setup the kernel entry point and stack of process
+     *   hash_proc:    add proc into proc hash_list
+     *   get_pid:      alloc a unique pid for process
+     *   wakeup_proc:  set proc->state = PROC_RUNNABLE
+     * VARIABLES:
+     *   proc_list:    the process set's list
+     *   nr_process:   the number of process set
+     */
+    
+    //    1. call alloc_proc to allocate a proc_struct
+    //    2. call setup_kstack to allocate a kernel stack for child process
+    //    3. call copy_mm to dup OR share mm according clone_flag
+    //    4. call copy_thread to setup tf & context in proc_struct
+    //    5. insert proc_struct into hash_list && proc_list
+    //    6. call wakeup_proc to make the new child process RUNNABLE
+    //    7. set ret vaule using child proc's pid
 
+    proc = alloc_proc();    // 调用alloc_proc函数分配一个proc_struct结构体
+    
+    if (proc == NULL) { // 如果分配失败，返回错误码
+        goto fork_out;
+    }
 
+    proc->parent = current; // 设置父进程为当前进程
 
+    if (setup_kstack(proc) != 0) {  // 调用setup_kstack函数为子进程分配内核栈
+        goto bad_fork_cleanup_kstack;
+    }
+
+    if (copy_mm(clone_flags, proc) != 0) {  // 调用copy_mm函数复制父进程的内存管理信息
+        goto bad_fork_cleanup_proc;
+    }
+
+    copy_thread(proc, stack, tf);   // 调用copy_thread函数复制父进程的trapframe信息
+
+    bool intr_flag;
+    local_intr_save(intr_flag); // 关闭中断
+    
+    proc->pid = get_pid();  // 为子进程分配pid
+    hash_proc(proc);    // 将子进程添加到hash_list中
+    list_add(&proc_list, &(proc->list_link));   // 将子进程添加到proc_list中
+    nr_process++;
+
+    local_intr_restore(intr_flag);  // 开启中断
+
+    wakeup_proc(proc);  // 唤醒子进程
+
+    ret = proc->pid;    // 设置返回值为子进程的pid
+
+fork_out:   // 返回
+    return ret;
+
+bad_fork_cleanup_kstack:    // 释放内核栈
+    put_kstack(proc);
+bad_fork_cleanup_proc:  // 释放进程
+    kfree(proc);
+    goto fork_out;
+}
+```
+
+这段代码实现创建一个新进程（子进程）的功能。在这段代码中，我们首先定义了一个返回值变量 `ret` 并初始化为 `-E_NO_FREE_PROC`，表示没有空闲的进程；接着声明了一个指向 `struct proc_struct` 类型的指针 `proc`，用于指向新创建的进程；然后检查当前进程数量是否已达到最大进程数 `MAX_PROCESS`，如果是，则跳转到 `fork_out` 标签处，表示创建新进程失败；如果未达到最大进程数，则会接着执行后面的代码；将 `ret` 的值设置为 `-E_NO_MEM`，表示内存不足；调用 `alloc_proc()` 函数分配一个 `proc_struct` 结构体，用于表示新进程，如果分配失败，跳转到 `fork_out` 标签处，表示创建失败；将新进程的父进程指针 `parent` 设置为当前进程；调用 `setup_kstack(proc)` 函数为子进程分配内核栈，如果分配失败，跳转到 `bad_fork_cleanup_kstack` 标签处，释放内核栈并返回错误；调用 `copy_mm(clone_flags, proc)` 函数复制父进程的内存管理信息到子进程，如果复制失败，跳转到 `bad_fork_cleanup_proc` 标签处，释放进程并返回错误；调用 `copy_thread(proc, stack, tf)` 函数复制父进程的上下文信息到子进程；关闭中断，以确保在修改全局数据结构时不会被中断；为子进程分配一个唯一的进程 ID（PID），将子进程添加到进程哈希表中，将子进程添加到进程列表中，增加进程数量计数器，再开启中断，然后唤醒子进程，使其变为可运行状态，将子进程的 PID 赋值给 `ret`，返回 `ret`。
+
+注：如果在上述过程中出现错误，会跳转到相应的标签处进行清理操作，并返回错误码。
 
 
 #### 练习 3：编写 proc_run 函数（需要编码）

@@ -321,6 +321,7 @@ copy_thread(struct proc_struct *proc, uintptr_t esp, struct trapframe *tf) {
  * @stack:       the parent's user stack pointer. if stack==0, It means to fork a kernel thread.
  * @tf:          the trapframe info, which will be copied to child process's proc->tf
  */
+// do_fork - 用来创建一个新的进程（子进程）
 int
 do_fork(uint32_t clone_flags, uintptr_t stack, struct trapframe *tf) {
     int ret = -E_NO_FREE_PROC;
@@ -355,44 +356,44 @@ do_fork(uint32_t clone_flags, uintptr_t stack, struct trapframe *tf) {
     //    6. call wakeup_proc to make the new child process RUNNABLE
     //    7. set ret vaule using child proc's pid
 
-    proc = alloc_proc();
+    proc = alloc_proc();    // 调用alloc_proc函数分配一个proc_struct结构体
     
-    if (proc == NULL) {
+    if (proc == NULL) { // 如果分配失败，返回错误码
         goto fork_out;
     }
 
-    proc->parent = current;
+    proc->parent = current; // 设置父进程为当前进程
 
-    if (setup_kstack(proc) != 0) {
+    if (setup_kstack(proc) != 0) {  // 调用setup_kstack函数为子进程分配内核栈
         goto bad_fork_cleanup_kstack;
     }
 
-    if (copy_mm(clone_flags, proc) != 0) {
+    if (copy_mm(clone_flags, proc) != 0) {  // 调用copy_mm函数复制父进程的内存管理信息
         goto bad_fork_cleanup_proc;
     }
 
-    copy_thread(proc, stack, tf);
+    copy_thread(proc, stack, tf);   // 调用copy_thread函数复制父进程的trapframe信息
 
     bool intr_flag;
-    local_intr_save(intr_flag);
+    local_intr_save(intr_flag); // 关闭中断
     
-    proc->pid = get_pid();
-    hash_proc(proc);
-    list_add(&proc_list, &(proc->list_link));
+    proc->pid = get_pid();  // 为子进程分配pid
+    hash_proc(proc);    // 将子进程添加到hash_list中
+    list_add(&proc_list, &(proc->list_link));   // 将子进程添加到proc_list中
     nr_process++;
 
-    local_intr_restore(intr_flag);
+    local_intr_restore(intr_flag);  // 开启中断
 
-    wakeup_proc(proc);
+    wakeup_proc(proc);  // 唤醒子进程
 
-    ret = proc->pid;
+    ret = proc->pid;    // 设置返回值为子进程的pid
 
-fork_out:
+fork_out:   // 返回
     return ret;
 
-bad_fork_cleanup_kstack:
+bad_fork_cleanup_kstack:    // 释放内核栈
     put_kstack(proc);
-bad_fork_cleanup_proc:
+bad_fork_cleanup_proc:  // 释放进程
     kfree(proc);
     goto fork_out;
 }
