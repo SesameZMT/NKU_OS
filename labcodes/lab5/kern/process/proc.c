@@ -103,6 +103,11 @@ alloc_proc(void) {
      *       uint32_t flags;                             // Process flag
      *       char name[PROC_NAME_LEN + 1];               // Process name
      */
+        memset(proc, 0, sizeof(struct proc_struct));
+
+        proc->state = PROC_UNINIT;
+        proc->pid = -1;
+        proc->cr3 = boot_cr3;
 
      //LAB5 YOUR CODE : (update LAB4 steps)
      /*
@@ -207,6 +212,17 @@ proc_run(struct proc_struct *proc) {
         *   switch_to():              Context switching between two processes
         */
 
+        bool intr_flag;
+        local_intr_save(intr_flag);
+
+        struct proc_struct *prev = current;
+        struct proc_struct *next = proc;
+
+        current = proc;
+        lcr3(proc->cr3);
+        switch_to(&(prev->context), &(next->context));
+
+        local_intr_restore(intr_flag);
     }
 }
 
@@ -394,6 +410,40 @@ do_fork(uint32_t clone_flags, uintptr_t stack, struct trapframe *tf) {
     //    5. insert proc_struct into hash_list && proc_list
     //    6. call wakeup_proc to make the new child process RUNNABLE
     //    7. set ret vaule using child proc's pid
+
+    proc = alloc_proc();
+    
+    if (proc == NULL) {
+        goto fork_out;
+    }
+
+    proc->parent = current;
+
+    if (setup_kstack(proc) != 0) {
+        goto bad_fork_cleanup_kstack;
+    }
+
+    if (copy_mm(clone_flags, proc) != 0) {
+        goto bad_fork_cleanup_proc;
+    }
+
+    copy_thread(proc, stack, tf);
+
+    bool intr_flag;
+    local_intr_save(intr_flag);
+    
+    proc->pid = get_pid();
+    hash_proc(proc);
+    // list_add(&proc_list, &(proc->list_link));
+    // nr_process++;
+    set_links(proc);
+
+    local_intr_restore(intr_flag);
+
+    wakeup_proc(proc);
+
+    ret = proc->pid;
+
 
     //LAB5 YOUR CODE : (update LAB4 steps)
     //TIPS: you should modify your written code in lab4(step1 and step5), not add more code.
@@ -603,7 +653,11 @@ load_icode(unsigned char *binary, size_t size) {
      *          tf->status should be appropriate for user program (the value of sstatus)
      *          hint: check meaning of SPP, SPIE in SSTATUS, use them by SSTATUS_SPP, SSTATUS_SPIE(defined in risv.h)
      */
-
+    tf->gpr.sp = USTACKTOP;
+    tf->epc = elf->e_entry;
+    // Set SPP to 0 so that we return to user mode
+    // Set SPIE to 1 so that we can handle interrupts
+    tf->status = (sstatus & ~SSTATUS_SPP) | SSTATUS_SPIE;
 
     ret = 0;
 out:
@@ -636,11 +690,11 @@ do_execve(const char *name, size_t len, unsigned char *binary, size_t size) {
 
     if (mm != NULL) {
         cputs("mm != NULL");
-        lcr3(boot_cr3);
-        if (mm_count_dec(mm) == 0) {
-            exit_mmap(mm);
-            put_pgdir(mm);
-            mm_destroy(mm);
+        lcr3(boot_cr3); // switch to kernel page table
+        if (mm_count_dec(mm) == 0) { // if this process is the last user of this mm
+            exit_mmap(mm); // release all memory of this process
+            put_pgdir(mm); // release PDT
+            mm_destroy(mm); // release mm
         }
         current->mm = NULL;
     }
@@ -651,7 +705,7 @@ do_execve(const char *name, size_t len, unsigned char *binary, size_t size) {
     set_proc_name(current, local_name);
     return 0;
 
-execve_exit:
+execve_exit: // fail
     do_exit(ret);
     panic("already exit: %e.\n", ret);
 }
@@ -865,4 +919,3 @@ cpu_idle(void) {
         }
     }
 }
-

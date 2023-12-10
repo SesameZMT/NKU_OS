@@ -284,6 +284,7 @@ void unmap_range(pde_t *pgdir, uintptr_t start, uintptr_t end) {
     } while (start != 0 && start < end);
 }
 
+// free up a range of virtual memory pages
 void exit_range(pde_t *pgdir, uintptr_t start, uintptr_t end) {
     assert(start % PGSIZE == 0 && end % PGSIZE == 0);
     assert(USER_ACCESS(start, end));
@@ -353,7 +354,7 @@ int copy_range(pde_t *to, pde_t *from, uintptr_t start, uintptr_t end,
         // call get_pte to find process A's pte according to the addr start
         pte_t *ptep = get_pte(from, start, 0), *nptep;
         if (ptep == NULL) {
-            start = ROUNDDOWN(start + PTSIZE, PTSIZE);
+            start = ROUNDDOWN(start + PTSIZE, PTSIZE); 
             continue;
         }
         // call get_pte to find process B's pte according to the addr start. If
@@ -388,8 +389,11 @@ int copy_range(pde_t *to, pde_t *from, uintptr_t start, uintptr_t end,
              * (3) memory copy from src_kvaddr to dst_kvaddr, size is PGSIZE
              * (4) build the map of phy addr of  nage with the linear addr start
              */
-
-
+            void *src_kvaddr = page2kva(page);
+            void *dst_kvaddr = page2kva(npage);
+            memcpy(dst_kvaddr, src_kvaddr, PGSIZE);
+            ret = page_insert(to, npage, start, perm);
+            
             assert(ret == 0);
         }
         start += PGSIZE;
@@ -625,4 +629,3 @@ static int get_pgtable_items(size_t left, size_t right, size_t start,
     }
     return 0;
 }
-
