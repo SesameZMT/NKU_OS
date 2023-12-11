@@ -314,6 +314,7 @@ put_pgdir(struct mm_struct *mm) {
 }
 
 // copy_mm - process "proc" duplicate OR share process "current"'s mm according clone_flags
+//         - 处理进程的内存空间
 //         - if clone_flags & CLONE_VM, then "share" ; else "duplicate"
 static int
 copy_mm(uint32_t clone_flags, struct proc_struct *proc) {
@@ -520,6 +521,7 @@ do_exit(int error_code) {
 }
 
 /* load_icode - load the content of binary program(ELF format) as the new content of current process
+- 加载二进制程序的内容（ELF格式）作为当前进程的新内容
  * @binary:  the memory addr of the content of binary program
  * @size:  the size of the content of binary program
  */
@@ -531,7 +533,7 @@ load_icode(unsigned char *binary, size_t size) {
 
     int ret = -E_NO_MEM;
     struct mm_struct *mm;
-    //(1) create a new mm for current process
+    //(1) create a new mm for current process - 为当前进程创建一个新的mm
     if ((mm = mm_create()) == NULL) {
         goto bad_mm;
     }
@@ -641,11 +643,11 @@ load_icode(unsigned char *binary, size_t size) {
     current->cr3 = PADDR(mm->pgdir);
     lcr3(PADDR(mm->pgdir));
 
-    //(6) setup trapframe for user environment
+    //(6) setup trapframe for user environment - 设置用户环境的trapframe
     struct trapframe *tf = current->tf;
     // Keep sstatus
     uintptr_t sstatus = tf->status;
-    memset(tf, 0, sizeof(struct trapframe));
+    memset(tf, 0, sizeof(struct trapframe));//清空trapframe
     /* LAB5:EXERCISE1 YOUR CODE
      * should set tf->gpr.sp, tf->epc, tf->status
      * NOTICE: If we set trapframe correctly, then the user level process can return to USER MODE from kernel. So
@@ -674,6 +676,7 @@ bad_mm:
 }
 
 // do_execve - call exit_mmap(mm)&put_pgdir(mm) to reclaim memory space of current process
+// - 调用exit_mmap（mm）和put_pgdir（mm）来回收当前进程的内存空间
 //           - call load_icode to setup new memory space accroding binary prog.
 int
 do_execve(const char *name, size_t len, unsigned char *binary, size_t size) {
@@ -752,7 +755,7 @@ repeat:
             }
         }
     }
-    if (haskid) {
+    if (haskid) {//如果有子进程，且子进程不是僵尸进程，那么就让当前进程睡眠，等待子进程退出
         current->state = PROC_SLEEPING;
         current->wait_state = WT_CHILD;
         schedule();
