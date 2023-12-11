@@ -24,8 +24,8 @@ PMP1: 0x0000000000000000-0xffffffffffffffff (A,R,W,X)
 Special kernel symbols:
   entry  0xc0200036 (virtual)
   etext  0xc02065e4 (virtual)
-  edata  0xc02a1248 (virtual)
-  end    0xc02ac7d0 (virtual)
+  edata  0xc02a11c0 (virtual)
+  end    0xc02ac748 (virtual)
 Kernel executable memory footprint: 690KB
 memory management: default_pmm_manager
 physcial memory map:
@@ -107,6 +107,6 @@ wait returns 0
 spin may pass.
 all user-mode processes have quit.
 init check memory pass.
-kernel panic at kern/process/proc.c:477:
+kernel panic at kern/process/proc.c:478:
     initproc exit.
 

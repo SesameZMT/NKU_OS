@@ -83,6 +83,7 @@ void forkrets(struct trapframe *tf);
 void switch_to(struct context *from, struct context *to);
 
 // alloc_proc - alloc a proc_struct and init all fields of proc_struct
+// 申请一个proc_struct结构体，并初始化
 static struct proc_struct *
 alloc_proc(void) {
     struct proc_struct *proc = kmalloc(sizeof(struct proc_struct));
@@ -103,11 +104,11 @@ alloc_proc(void) {
      *       uint32_t flags;                             // Process flag
      *       char name[PROC_NAME_LEN + 1];               // Process name
      */
-        memset(proc, 0, sizeof(struct proc_struct));
+        memset(proc, 0, sizeof(struct proc_struct));//初始化proc_struct结构体
 
         proc->state = PROC_UNINIT;
         proc->pid = -1;
-        proc->cr3 = boot_cr3;
+        proc->cr3 = boot_cr3;//进程的页目录表
 
      //LAB5 YOUR CODE : (update LAB4 steps)
      /*
@@ -411,7 +412,7 @@ do_fork(uint32_t clone_flags, uintptr_t stack, struct trapframe *tf) {
     //    6. call wakeup_proc to make the new child process RUNNABLE
     //    7. set ret vaule using child proc's pid
 
-    proc = alloc_proc();
+    proc = alloc_proc();//分配一个proc_struct
     
     if (proc == NULL) {
         goto fork_out;

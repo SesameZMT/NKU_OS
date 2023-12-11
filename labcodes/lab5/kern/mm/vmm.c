@@ -459,21 +459,21 @@ do_pgfault(struct mm_struct *mm, uint_t error_code, uintptr_t addr) {
             //map of phy addr <--->
             //logical addr
             //(3) make the page swappable.
-            int r = swap_in(mm, addr, &page);
+            int r = swap_in(mm, addr, &page);//swap_in将磁盘页的内容读入这个内存页
             
             if (r != 0) {
                 cprintf("swap_in in do_pgfault failed\n");
                 goto failed;
             }
 
-            r = page_insert(mm->pgdir, page, addr, perm);
+            r = page_insert(mm->pgdir, page, addr, perm);//建立一个Page的phy addr与线性addr la的映射
 
             if (r != 0) {
                 cprintf("page_insert in do_pgfault failed\n");
                 goto failed;
             }
 
-            swap_map_swappable(mm, addr, page, 1);
+            swap_map_swappable(mm, addr, page, 1);//设置页面可交换，参数mm是进程的mm_struct结构，addr是缺页的线性地址，page是缺页的物理页，flags是交换标志，1表示可交换，0表示不可交换
 
             page->pra_vaddr = addr;
         } else {

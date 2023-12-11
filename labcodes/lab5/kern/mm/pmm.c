@@ -285,6 +285,7 @@ void unmap_range(pde_t *pgdir, uintptr_t start, uintptr_t end) {
 }
 
 // free up a range of virtual memory pages
+// 
 void exit_range(pde_t *pgdir, uintptr_t start, uintptr_t end) {
     assert(start % PGSIZE == 0 && end % PGSIZE == 0);
     assert(USER_ACCESS(start, end));
@@ -389,10 +390,11 @@ int copy_range(pde_t *to, pde_t *from, uintptr_t start, uintptr_t end,
              * (3) memory copy from src_kvaddr to dst_kvaddr, size is PGSIZE
              * (4) build the map of phy addr of  nage with the linear addr start
              */
-            void *src_kvaddr = page2kva(page);
-            void *dst_kvaddr = page2kva(npage);
-            memcpy(dst_kvaddr, src_kvaddr, PGSIZE);
-            ret = page_insert(to, npage, start, perm);
+
+            void *src_kvaddr = page2kva(page);//找出page的内核虚拟地址
+            void *dst_kvaddr = page2kva(npage);//找出npage的内核虚拟地址
+            memcpy(dst_kvaddr, src_kvaddr, PGSIZE);//内存拷贝，从src_kvaddr到dst_kvaddr，大小为PGSIZE
+            ret = page_insert(to, npage, start, perm);//建立npage的物理地址和线性地址start的映射
             
             assert(ret == 0);
         }
