@@ -19,7 +19,7 @@ state/pid/runs/kstack/need_resched/parent/mm/context/tf/cr3/flags/name。
 
 在ucore中，`struct proc_struct` 结构体是用于存储进程或线程的管理信息的。在 `alloc_proc` 函数中，对 `struct proc_struct` 结构体进行初始化。
 
-```c
+```cpp
 struct proc_struct *alloc_proc(void) {
     struct proc_struct *proc = kmalloc(sizeof(struct proc_struct));//内存分配
     if (proc != NULL) {
