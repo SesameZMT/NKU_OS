@@ -38,13 +38,16 @@ failed_cleanup:
 }
 
 /* sysfile_open - open file */
+// 经syscall调用(sys_open)
 int
 sysfile_open(const char *__path, uint32_t open_flags) {
     int ret;
     char *path;
+    // 要把位于用户空间的字符串__path拷贝到内核空间中的字符串path
     if ((ret = copy_path(&path, __path)) != 0) {
         return ret;
     }
+    // file_open调用vfs_open, 都是在文件系统抽象层的处理
     ret = file_open(path, open_flags);
     kfree(path);
     return ret;
@@ -60,27 +63,33 @@ sysfile_close(int fd) {
 int
 sysfile_read(int fd, void *base, size_t len) {
     struct mm_struct *mm = current->mm;
+    // 检查错误：读取长度为0，或者文件描述符不合法
     if (len == 0) {
         return 0;
     }
     if (!file_testfd(fd, 1, 0)) {
         return -E_INVAL;
     }
+    // 分配内核空间的缓冲区
     void *buffer;
     if ((buffer = kmalloc(IOBUF_SIZE)) == NULL) {
         return -E_NO_MEM;
     }
 
+    // 循环读取文件，每次读取buffer大小的数据
     int ret = 0;
     size_t copied = 0, alen;
     while (len != 0) {
+        // 检查剩余长度是否大于buffer大小
         if ((alen = IOBUF_SIZE) > len) {
             alen = len;
         }
+        // 读取内容到buffer
         ret = file_read(fd, buffer, alen, &alen);
         if (alen != 0) {
             lock_mm(mm);
             {
+                // 将内容拷贝到用户的内存空间
                 if (copy_to_user(mm, base, buffer, alen)) {
                     assert(len >= alen);
                     base += alen, len -= alen, copied += alen;

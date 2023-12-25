@@ -149,6 +149,7 @@ void interrupt_handler(struct trapframe *tf) {
             clock_set_next_event();
             ++ticks;
             run_timer_list();
+            // 轮询检查stdin是否有输入
             dev_stdin_write(cons_getc());
             break;
         case IRQ_H_TIMER:

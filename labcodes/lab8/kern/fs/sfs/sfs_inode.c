@@ -357,6 +357,7 @@ sfs_bmap_load_nolock(struct sfs_fs *sfs, struct sfs_inode *sin, uint32_t index, 
     int ret;
     uint32_t ino;
     bool create = (index == din->blocks);
+    // 根据第index个索引指向的block索引，取出相应的单元
     if ((ret = sfs_bmap_get_nolock(sfs, sin, index, create, &ino)) != 0) {
         return ret;
     }
@@ -505,7 +506,7 @@ sfs_lookup_once(struct sfs_fs *sfs, struct sfs_inode *sin, const char *name, str
     }
     unlock_sin(sin);
     if (ret == 0) {
-		// load the content of inode with the the NO. of disk block
+		// load the content of inode with the the NO. of disk block !
         ret = sfs_load_inode(sfs, node_store, ino);
     }
     return ret;
@@ -551,24 +552,33 @@ sfs_close(struct inode *node) {
  */
 static int
 sfs_io_nolock(struct sfs_fs *sfs, struct sfs_inode *sin, void *buf, off_t offset, size_t *alenp, bool write) {
+    // 计算辅助变量
     struct sfs_disk_inode *din = sin->din;
     assert(din->type != SFS_TYPE_DIR);
+
     off_t endpos = offset + *alenp, blkoff;
     *alenp = 0;
-	// calculate the Rd/Wr end position
+	
+    // calculate the Rd/Wr end position
     if (offset < 0 || offset >= SFS_MAX_FILE_SIZE || offset > endpos) {
         return -E_INVAL;
     }
+
+    // 读写范围为空
     if (offset == endpos) {
         return 0;
     }
     if (endpos > SFS_MAX_FILE_SIZE) {
         endpos = SFS_MAX_FILE_SIZE;
     }
+
+    // 非写操作
     if (!write) {
+        // 已经读到末尾
         if (offset >= din->size) {
             return 0;
         }
+        // 保证读取范围不会超过文件末尾
         if (endpos > din->size) {
             endpos = din->size;
         }
@@ -576,6 +586,7 @@ sfs_io_nolock(struct sfs_fs *sfs, struct sfs_inode *sin, void *buf, off_t offset
 
     int (*sfs_buf_op)(struct sfs_fs *sfs, void *buf, size_t len, uint32_t blkno, off_t offset);
     int (*sfs_block_op)(struct sfs_fs *sfs, void *buf, uint32_t blkno, uint32_t nblks);
+    // 根据读写使用不同函数
     if (write) {
         sfs_buf_op = sfs_wbuf, sfs_block_op = sfs_wblock;
     }
@@ -586,6 +597,7 @@ sfs_io_nolock(struct sfs_fs *sfs, struct sfs_inode *sin, void *buf, off_t offset
     int ret = 0;
     size_t size, alen = 0;
     uint32_t ino;
+    // 开始块
     uint32_t blkno = offset / SFS_BLKSIZE;          // The NO. of Rd/Wr begin block
     uint32_t nblks = endpos / SFS_BLKSIZE - blkno;  // The size of Rd/Wr blocks
 
@@ -599,11 +611,58 @@ sfs_io_nolock(struct sfs_fs *sfs, struct sfs_inode *sin, void *buf, off_t offset
      * (3) If end position isn't aligned with the last block, Rd/Wr some content from begin to the (endpos % SFS_BLKSIZE) of the last block
 	 *       NOTICE: useful function: sfs_bmap_load_nolock, sfs_buf_op	
 	*/
+    // 先处理起始的没有对齐到块的部分
+    if ((blkoff = offset % SFS_BLKSIZE) != 0) {
+        size = (nblks != 0) ? (SFS_BLKSIZE - blkoff) : (endpos - offset);
+        // 得到blkno对应的inode编号
+        if ((ret = sfs_bmap_load_nolock(sfs, sin, blkno, &ino)) != 0) {
+            goto out;
+        }
+        // 进行相应的读写操作
+        if ((ret = sfs_buf_op(sfs, buf, size, ino, blkoff)) != 0) {
+            goto out;
+        }
 
-    
+        // 更新后续读写需要的参数
+        alen += size;
+        buf += size;
+
+        if (nblks == 0) {
+            goto out;
+        }
+        blkno++;
+        nblks--;
+    }
+
+    // 以块为单位循环处理中间的部分
+    if (nblks > 0) {
+        if ((ret = sfs_bmap_load_nolock(sfs, sin, blkno, &ino)) != 0) {
+            goto out;
+        }
+        if ((ret = sfs_block_op(sfs, buf, ino, nblks)) != 0) {
+            goto out;
+        }
+
+        alen += nblks * SFS_BLKSIZE;
+        buf += nblks * SFS_BLKSIZE;
+        blkno += nblks;
+        nblks -= nblks;
+    }
+
+    //处理末尾
+    if ((size = endpos % SFS_BLKSIZE) != 0) {
+        if ((ret = sfs_bmap_load_nolock(sfs, sin, blkno, &ino)) != 0) {
+            goto out;
+        }
+        if ((ret = sfs_buf_op(sfs, buf, size, ino, 0)) != 0) {
+            goto out;
+        }
+        alen += size;
+    }
 
 out:
     *alenp = alen;
+    //如果是写操作，则需更新文件大小
     if (offset + alen > sin->din->size) {
         sin->din->size = offset + alen;
         sin->dirty = 1;
@@ -615,15 +674,19 @@ out:
  * sfs_io - Rd/Wr file. the wrapper of sfs_io_nolock
             with lock protect
  */
+// node是对应文件的inode，iob是缓存，write是读写标志
 static inline int
 sfs_io(struct inode *node, struct iobuf *iob, bool write) {
+    // 首先找到inode对应的sfs和sin
     struct sfs_fs *sfs = fsop_info(vop_fs(node), sfs);
     struct sfs_inode *sin = vop_info(node, sfs_inode);
     int ret;
     lock_sin(sin);
     {
         size_t alen = iob->io_resid;
+        // 调用sfs_io_nolock进行读写
         ret = sfs_io_nolock(sfs, sin, iob->io_base, iob->io_offset, &alen, write);
+        // 调整iobuf指针
         if (alen != 0) {
             iobuf_skip(iob, alen);
         }
@@ -939,8 +1002,12 @@ out_unlock:
  *              DIR, and hand back the inode for the file it
  *              refers to.
  */
+// node是根目录“/”所对应的 inode 节点
+// path是文件sfs_filetest1 的绝对路径
+// node_store是经过查找获得的 sfs_filetest1 所对应的 inode 节点
 static int
 sfs_lookup(struct inode *node, char *path, struct inode **node_store) {
+    // 以“/”为分割符，从左至右逐一分解path获得各个子目录和最终文件对应的inode节点
     struct sfs_fs *sfs = fsop_info(vop_fs(node), sfs);
     assert(*path != '\0' && *path != '/');
     vop_ref_inc(node);

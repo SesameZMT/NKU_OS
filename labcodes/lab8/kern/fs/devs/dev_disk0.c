@@ -17,6 +17,8 @@
 static char *disk0_buffer;
 static semaphore_t disk0_sem;
 
+// ramdisk接口，每次读取或写入若干block
+
 static void
 lock_disk0(void) {
     down(&(disk0_sem));

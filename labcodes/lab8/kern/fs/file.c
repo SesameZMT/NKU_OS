@@ -156,7 +156,7 @@ file_testfd(int fd, bool readable, bool writable) {
 int
 file_open(char *path, uint32_t open_flags) {
     bool readable = 0, writable = 0;
-    switch (open_flags & O_ACCMODE) {
+    switch (open_flags & O_ACCMODE) {  //解析open_flags
     case O_RDONLY: readable = 1; break;
     case O_WRONLY: writable = 1; break;
     case O_RDWR:
@@ -167,12 +167,14 @@ file_open(char *path, uint32_t open_flags) {
     }
     int ret;
     struct file *file;
+    // 在当前进程分配file descriptor，为打开文件数组filemap中的一个空闲元素
     if ((ret = fd_array_alloc(NO_FD, &file)) != 0) {
         return ret;
     }
     struct inode *node;
+    // 调用vfs_open打开文件，得到path对应的VFS inode
     if ((ret = vfs_open(path, open_flags, &node)) != 0) {
-        fd_array_free(file);
+        fd_array_free(file);  // 打开文件失败，释放file descriptor
         return ret;
     }
     file->pos = 0;
@@ -183,12 +185,14 @@ file_open(char *path, uint32_t open_flags) {
             fd_array_free(file);
             return ret;
         }
+        // 如果是以O_APPEND打开文件，那么文件的读写位置为文件尾
         file->pos = stat->st_size;
     }
-    file->node = node;
+    file->node = node;  // current->fs_struct->ﬁlemap[fd]->node = node;
     file->readable = readable;
     file->writable = writable;
-    fd_array_open(file);
+    fd_array_open(file);  // 设置file descriptor的状态为FD_OPENED
+    // 返回file map中的索引，即file descriptor
     return file->fd;
 }
 
@@ -205,27 +209,33 @@ file_close(int fd) {
 }
 
 // read file
+// fd是文件描述符，base是缓存的基地址，len是要读取的长度，copied_store存放实际读取的长度
 int
 file_read(int fd, void *base, size_t len, size_t *copied_store) {
     int ret;
     struct file *file;
     *copied_store = 0;
+    // 通过fd获取file，并检查文件是否可读
     if ((ret = fd2file(fd, &file)) != 0) {
         return ret;
     }
     if (!file->readable) {
         return -E_INVAL;
     }
+    // 文件打开计数加1
     fd_array_acquire(file);
 
     struct iobuf __iob, *iob = iobuf_init(&__iob, base, len, file->pos);
+    // 将文件内容读取到缓冲区，进入SFS文件系统层
     ret = vop_read(file->node, iob);
 
+    // 获取实际读取的长度，更新文件读写位置
     size_t copied = iobuf_used(iob);
     if (file->status == FD_OPENED) {
         file->pos += copied;
     }
     *copied_store = copied;
+    // 文件打开计数减1
     fd_array_release(file);
     return ret;
 }

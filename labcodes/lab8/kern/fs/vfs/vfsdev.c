@@ -11,6 +11,8 @@
 #include <error.h>
 #include <assert.h>
 #include <proc.h>
+
+// 通过一个链接 vfs_dev_t 结构的双向链表找到 device 对应的 inode数据结构
 // device info entry in vdev_list 
 typedef struct {
     const char *devname;
@@ -23,6 +25,7 @@ typedef struct {
 #define le2vdev(le, member)                         \
     to_struct((le), vfs_dev_t, member)
 
+// 可以找到 ucore 能够访问的所有设备文件
 static list_entry_t vdev_list;     // device info list in vfs layer
 static semaphore_t vdev_list_sem;
 

@@ -26,10 +26,12 @@ stdout_io(struct device *dev, struct iobuf *iob, bool write) {
     if (write) {
         char *data = iob->io_base;
         for (; iob->io_resid != 0; iob->io_resid --) {
+            // 把字符写到控制台
             cputchar(*data ++);
         }
         return 0;
     }
+    // 不能从控制台读
     return -E_INVAL;
 }
 

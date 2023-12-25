@@ -8,9 +8,11 @@
 
 
 // open file in vfs, get/create inode for file with filename path.
+// 找到path指出的文件所对应的基于inode数据结构的VFS索引节点node
 int
 vfs_open(char *path, uint32_t open_flags, struct inode **node_store) {
     bool can_write = 0;
+    // 解析open_flags
     switch (open_flags & O_ACCMODE) {
     case O_RDONLY:
         break;
@@ -32,15 +34,18 @@ vfs_open(char *path, uint32_t open_flags, struct inode **node_store) {
     struct inode *node;
     bool excl = (open_flags & O_EXCL) != 0;
     bool create = (open_flags & O_CREAT) != 0;
+    // 调用vfs_lookup找到path对应文件的inode
     ret = vfs_lookup(path, &node);
 
-    if (ret != 0) {
+    if (ret != 0) {  // 要打开的文件还不存在
         if (ret == -16 && (create)) {
             char *name;
             struct inode *dir;
+            // 在当前目录下创建新文件
             if ((ret = vfs_lookup_parent(path, &dir, &name)) != 0) {
                 return ret;
             }
+            // 创建文件
             ret = vop_create(dir, name, excl, &node);
         } else return ret;
     } else if (excl && create) {
@@ -48,6 +53,7 @@ vfs_open(char *path, uint32_t open_flags, struct inode **node_store) {
     }
     assert(node != NULL);
     
+    // 打开文件
     if ((ret = vop_open(node, open_flags)) != 0) {
         vop_ref_dec(node);
         return ret;

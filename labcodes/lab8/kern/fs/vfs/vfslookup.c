@@ -72,10 +72,12 @@ int
 vfs_lookup(char *path, struct inode **node_store) {
     int ret;
     struct inode *node;
+    // 找到根目录对应的inode bootfs_node
     if ((ret = get_device(path, &path, &node)) != 0) {
         return ret;
     }
     if (*path != '\0') {
+        // 进入SFS文件系统层处理 函数指针vop_lookup会调用sfs_lookup
         ret = vop_lookup(node, path, node_store);
         vop_ref_dec(node);
         return ret;

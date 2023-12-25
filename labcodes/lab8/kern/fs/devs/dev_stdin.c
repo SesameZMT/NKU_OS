@@ -19,7 +19,7 @@ static off_t p_rpos, p_wpos;
 static wait_queue_t __wait_queue, *wait_queue = &__wait_queue;
 
 void
-dev_stdin_write(char c) {
+dev_stdin_write(char c) {  // 把其他地方的字符写到stdin缓冲区, 准备被读取
     bool intr_flag;
     if (c != '\0') {
         local_intr_save(intr_flag);
@@ -30,6 +30,7 @@ dev_stdin_write(char c) {
             }
             if (!wait_queue_empty(wait_queue)) {
                 wakeup_queue(wait_queue, WT_KBD, 1);
+                // 若当前进程在等待键盘输入, 则唤醒它
             }
         }
         local_intr_restore(intr_flag);
@@ -37,17 +38,17 @@ dev_stdin_write(char c) {
 }
 
 static int
-dev_stdin_read(char *buf, size_t len) {
+dev_stdin_read(char *buf, size_t len) {  // 从stdin缓冲区读取字符
     int ret = 0;
     bool intr_flag;
     local_intr_save(intr_flag);
     {
         for (; ret < len; ret ++, p_rpos ++) {
         try_again:
-            if (p_rpos < p_wpos) {
+            if (p_rpos < p_wpos) {  // 缓冲区有字符
                 *buf ++ = stdin_buffer[p_rpos % STDIN_BUFSIZE];
             }
-            else {
+            else {  // 缓冲区没有字符，等待键盘输入
                 wait_t __wait, *wait = &__wait;
                 wait_current_set(wait_queue, wait, WT_KBD);
                 local_intr_restore(intr_flag);

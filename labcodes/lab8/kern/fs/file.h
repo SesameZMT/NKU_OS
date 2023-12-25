@@ -14,12 +14,12 @@ struct dirent;
 struct file {
     enum {
         FD_NONE, FD_INIT, FD_OPENED, FD_CLOSED,
-    } status;
+    } status;  // 访问文件的执行状态
     bool readable;
     bool writable;
-    int fd;
+    int fd;  // 文件在filemap中的索引
     off_t pos;
-    struct inode *node;
+    struct inode *node;  // 文件对应的内存inode指针
     int open_count;
 };
 

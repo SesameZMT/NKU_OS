@@ -26,19 +26,20 @@ struct iobuf;
  * vfs_open() and vfs_close(). Code above the VFS layer should not
  * need to worry about it.
  */
+// 封装不同文件系统的特定索引节点信息
 struct inode {
     union {
         struct device __device_info;
         struct sfs_inode __sfs_inode_info;
-    } in_info;
+    } in_info;  // 不同文件系统的inode信息
     enum {
         inode_type_device_info = 0x1234,
         inode_type_sfs_inode_info,
-    } in_type;
-    int ref_count;
-    int open_count;
-    struct fs *in_fs;
-    const struct inode_ops *in_ops;
+    } in_type;  // inode所属文件系统类型
+    int ref_count;  // 引用数
+    int open_count;  // 打开此inode对应文件的个数
+    struct fs *in_fs;  // 抽象文件系统，包含函数指针
+    const struct inode_ops *in_ops;  // 抽象inode操作
 };
 
 #define __in_type(type)                                             inode_type_##type##_info

@@ -75,20 +75,51 @@ wakeup_proc(struct proc_struct *proc) {
     local_intr_restore(intr_flag);
 }
 
+// void
+// schedule(void) {
+//     bool intr_flag;
+//     struct proc_struct *next;
+//     local_intr_save(intr_flag);
+//     {
+//         current->need_resched = 0;
+//         if (current->state == PROC_RUNNABLE) {
+//             sched_class_enqueue(current);
+//         }
+//         if ((next = sched_class_pick_next()) != NULL) {
+//             sched_class_dequeue(next);
+//         }
+//         if (next == NULL) {
+//             next = idleproc;
+//         }
+//         next->runs ++;
+//         if (next != current) {
+//             proc_run(next);
+//         }
+//     }
+//     local_intr_restore(intr_flag);
+// }
+
+
+//由于lab6未实现，采用原始的进程调度策略
 void
 schedule(void) {
     bool intr_flag;
-    struct proc_struct *next;
+    list_entry_t *le, *last;
+    struct proc_struct *next = NULL;
     local_intr_save(intr_flag);
     {
         current->need_resched = 0;
-        if (current->state == PROC_RUNNABLE) {
-            sched_class_enqueue(current);
-        }
-        if ((next = sched_class_pick_next()) != NULL) {
-            sched_class_dequeue(next);
-        }
-        if (next == NULL) {
+        last = (current == idleproc) ? &proc_list : &(current->list_link); // idleproc是不在进程列表里的
+        le = last;
+        do {
+            if ((le = list_next(le)) != &proc_list) {
+                next = le2proc(le, list_link);
+                if (next->state == PROC_RUNNABLE) {
+                    break;
+                }
+            }
+        } while (le != last);
+        if (next == NULL || next->state != PROC_RUNNABLE) {
             next = idleproc;
         }
         next->runs ++;

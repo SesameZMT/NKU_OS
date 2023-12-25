@@ -19,6 +19,7 @@ initfd(int fd2, const char *path, uint32_t open_flags) {
     return ret;
 }
 
+// 入口点初始化stdio文件描述符
 void
 umain(int argc, char *argv[]) {
     int fd;
